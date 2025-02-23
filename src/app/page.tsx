@@ -3,8 +3,9 @@ import Image from "next/image";
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Campo from './pages/agregarCampo';
-import Landing from './pages/welcome'
+import Campo from './pages/addFields';
+import Landing from './pages/welcome';
+import OverviewField from "./pages/overviewField";
 
 export default function Page() {
   const [isClient, setIsClient] = useState(false);
@@ -24,6 +25,8 @@ export default function Page() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/:id/addFields" element={<Campo />} />
+        <Route path="/:id/overviewField" element={<OverviewField />} />
       </Routes>
     </BrowserRouter>
   );
