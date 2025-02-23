@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Campo from './pages/addFields';
 import Landing from './pages/welcome';
 import OverviewField from "./pages/overviewField";
+import Crops from "./pages/crops";
 
 export default function Page() {
   const [isClient, setIsClient] = useState(false);
@@ -27,6 +28,7 @@ export default function Page() {
         <Route path="/" element={<Landing />} />
         <Route path="/:id/addFields" element={<Campo />} />
         <Route path="/:id/overviewField" element={<OverviewField />} />
+        <Route path="/:id/crops" element={<Crops />} />
       </Routes>
     </BrowserRouter>
   );
