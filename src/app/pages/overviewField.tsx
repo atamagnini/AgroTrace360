@@ -75,8 +75,24 @@ export default function OverviewField() {
 
     const handleCultivosClick = () => {
         navigate(`/${id}/crops`);
-      };
-  
+    };
+
+    const handleCatalogoClick = () => {
+        navigate(`/${id}/catalogue`);
+    };
+
+    const handleReportesClick = () => {
+        navigate(`/${id}/reports`);
+    };
+
+    const handleCalendarioClick = () => {
+        navigate(`/${id}/calendar`);
+    };
+
+    const handleSeguimientoClick = () => {
+        navigate(`/${id}/tracking`);
+    };
+    
     if (loading) {
       return <p>Loading...</p>;
     }
@@ -84,6 +100,7 @@ export default function OverviewField() {
     if (error) {
       return <p>Error: {error}</p>;
     }
+
   
     return (
         <div className="flex">
@@ -96,19 +113,27 @@ export default function OverviewField() {
                         <FaChartBar className="text-white" />
                         <span>Cultivos</span>
                     </button>
-                    <button className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                    <button 
+                        onClick={handleSeguimientoClick}
+                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
                         <FaSearch className="text-white" />
                         <span>Seguimiento</span>
                     </button>
-                    <button className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                    <button 
+                        onClick={handleCalendarioClick}
+                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
                         <FaRegCalendarAlt className="text-white" />
                         <span>Calendario</span>
                     </button>
-                    <button className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                    <button 
+                        onClick={handleReportesClick} 
+                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
                         <FaFileAlt className="text-white" />
                         <span>Reportes</span>
                     </button>
-                    <button className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                    <button
+                        onClick={handleCatalogoClick} 
+                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
                         <FaRegListAlt className="text-white" />
                         <span>Catálogo</span>
                     </button>
