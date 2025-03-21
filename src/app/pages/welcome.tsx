@@ -5,18 +5,30 @@ import { useNavigate } from 'react-router-dom';
 export default function Landing() {
   // State to manage modal visibility
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
 
-  // Function to handle opening the modal
+  // Function to handle opening the registration modal
   const openModal = () => {
     setShowModal(true);
   };
 
-  // Function to handle closing the modal
+  // Function to handle opening the login modal
+  const openLoginModal = () => {
+    setShowLoginModal(true);
+  };
+
+  // Function to handle closing the registration modal
   const closeModal = () => {
     setShowModal(false);
+  };
+
+  // Function to handle closing the login modal
+  const closeLoginModal = () => {
+    setShowLoginModal(false);
   };
 
   // Form submission handler
@@ -78,9 +90,43 @@ export default function Landing() {
     }
   };
 
-/*     // Handle form data here
-    console.log('Form submitted!');
-    closeModal(); */
+  // Login Form Submission Handler
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const loginData = {
+      nombre_usuario: username,
+      contraseña: password,
+    };
+
+    try {
+      const response = await axios.post(
+        'https://lksb5xp9g4.execute-api.us-east-1.amazonaws.com/login/login',
+        loginData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const responseBody = JSON.parse(response.data.body);
+
+      if (response.status === 200 && responseBody.idcuentas) {
+        // Save user details to localStorage or sessionStorage
+        localStorage.setItem('username', username);
+        localStorage.setItem('userId', responseBody.idcuentas);
+
+        closeLoginModal();
+        navigate(`/${responseBody.idcuentas}/overviewField`);
+      } else {
+        alert('Invalid username or password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Error during login');
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -99,6 +145,7 @@ export default function Landing() {
       {/* Button Section */}
       <div className="flex flex-col space-y-4">
         <button
+          onClick={openLoginModal}
           className="px-6 py-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200"
         >
           Entrar
@@ -111,7 +158,7 @@ export default function Landing() {
         </button>
       </div>
 
-      {/* Modal Section */}
+      {/* Registration Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 w-96 h-13">
@@ -184,6 +231,51 @@ export default function Landing() {
             </form>
             <button
               onClick={closeModal}
+              className="mt-4 text-gray-500 hover:text-gray-700"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-2xl font-bold mb-4">Entrar</h2>
+            <form onSubmit={handleLogin}>
+              <div className="mb-4">
+                <label htmlFor="username" className="block mb-2">Nombre de usuario:</label>
+                <input
+                  type="text"
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="password" className="block mb-2">Contraseña:</label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+              >
+                Entrar
+              </button>
+            </form>
+            <button
+              onClick={closeLoginModal}
               className="mt-4 text-gray-500 hover:text-gray-700"
             >
               Cerrar

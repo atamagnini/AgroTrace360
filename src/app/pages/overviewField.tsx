@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
 
 export default function OverviewField() {
     const { id } = useParams();
@@ -20,13 +20,22 @@ export default function OverviewField() {
         fetchFieldData(id);
       }
     }, [id]);
-  
+    
+    // Handler function to log out
+    const handleLogout = () => {
+        // Clear the user data from localStorage
+        localStorage.removeItem('username');
+        localStorage.removeItem('userId');
+        
+        navigate('/');
+    };
+
     const fetchFieldData = async (userId: string) => {
       try {
         // Replace this URL with your actual API endpoint
         const response = await axios.post(
             'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data', 
-            { idcuentas: userId }, // Send the body with idcuentas
+            { idcuentas: userId },
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -37,7 +46,6 @@ export default function OverviewField() {
         const data = JSON.parse(response.data.body);
   
         if (response.status === 200 && data.length > 0) {
-            // Assuming the first item in the array is the field data we need
             const field = data[0];
             setFieldName(field.nombre || 'No field name available');
             setUserName(field.nombre_usuario || 'No user name available');
@@ -46,7 +54,7 @@ export default function OverviewField() {
             setLoading(false);
             fetchWeatherData(field.latitud, field.longitud);
           } else {
-            setError('No field data found.');
+            setError('No tienes campos aún');
             setLoading(false);
           }
       } catch (error) {
@@ -55,9 +63,8 @@ export default function OverviewField() {
       }
     };
 
-    // Fetch weather data using the latitude and longitude
     const fetchWeatherData = async (latitude: number, longitude: number) => {
-        const apiKey = '5a24d7f9898bef180f12f26b3e8cd165';  // Replace with your actual weather API key
+        const apiKey = '5a24d7f9898bef180f12f26b3e8cd165';
         try {
             const weatherResponse = await axios.get(`https://api.openweathermap.org/data/2.5/weather`, {
                 params: {
@@ -67,7 +74,7 @@ export default function OverviewField() {
                     units: 'metric',
                 },
             });
-            setWeatherData(weatherResponse.data); // Set the weather data
+            setWeatherData(weatherResponse.data);
         } catch (error) {
             setError('Failed to fetch weather data');
         }
@@ -93,12 +100,25 @@ export default function OverviewField() {
         navigate(`/${id}/tracking`);
     };
     
+    const handleAddFieldClick = () => {
+        navigate(`/${id}/addFields`);
+    };
+
     if (loading) {
       return <p>Loading...</p>;
     }
   
     if (error) {
-      return <p>Error: {error}</p>;
+      return (
+        <div className="flex justify-center items-center flex-col">
+          <p>{error}</p>
+          <button 
+            onClick={handleAddFieldClick}
+            className="mt-4 px-6 py-3 text-white bg-green-500 rounded-full text-xl hover:bg-green-600 transition duration-200">
+            Agregar campo
+          </button>
+        </div>
+      );
     }
 
   
@@ -139,6 +159,14 @@ export default function OverviewField() {
                     </button>
                 </div>
             </div>
+
+            {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                  >
+                    <FaSignOutAlt className="text-white" size={24} />
+                  </button>
 
             {/* Main Content */}
             <div className="w-3/4 p-6">

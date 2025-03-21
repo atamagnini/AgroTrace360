@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
 import axios from 'axios';
 
 export default function Catalogue() {
@@ -14,6 +14,15 @@ export default function Catalogue() {
     const [locationData, setLocationData] = useState<any>({});
 
     const googleApiKey = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E'; 
+
+    // Handler function to log out
+    const handleLogout = () => {
+        // Clear the user data from localStorage
+        localStorage.removeItem('username');
+        localStorage.removeItem('userId');
+        
+        navigate('/');
+    };
 
     // Fetch crops data from the Lambda function
     useEffect(() => {
@@ -48,34 +57,39 @@ export default function Catalogue() {
     
     // Function to fetch the location using latitude and longitude from Google Geocoding API
     const getLocationFromCoordinates = async (lat: number, lon: number) => {
+        if (!lat || !lon) {
+            return 'Location not available'; // Return early if coordinates are invalid
+        }
         try {
             const response = await axios.get(
                 `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${googleApiKey}`
             );
             if (response.data.status === 'OK') {
-                // Explicitly type the result as GeocodingResult
                 const address = (response.data.results as GeocodingResult[]).find(result =>
                     result.types.includes('locality')
-                )?.formatted_address || response.data.results[0]?.formatted_address; // Default to the first result
+                )?.formatted_address || response.data.results[0]?.formatted_address;
                 return address;
             }
         } catch (error) {
             console.error('Error fetching location data', error);
             return 'Location not found';
         }
-    };    
+    };        
 
     // Fetch the location data for each crop
     useEffect(() => {
         const fetchLocationData = async () => {
             const updatedCrops = await Promise.all(crops.map(async (crop) => {
-                const location = await getLocationFromCoordinates(crop.latitud, crop.longitud);
-                return { ...crop, location };
+                if (!crop.location && crop.latitud && crop.longitud) {
+                    const location = await getLocationFromCoordinates(crop.latitud, crop.longitud);
+                    return { ...crop, location };
+                }
+                return crop;
             }));
             setCrops(updatedCrops);
         };
-
-        if (crops.length > 0) {
+    
+        if (crops.length > 0 && crops.some(crop => !crop.location)) { 
             fetchLocationData();
         }
     }, [crops]);
@@ -142,6 +156,14 @@ export default function Catalogue() {
                 </div>
             </div>
 
+            {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                  >
+                    <FaSignOutAlt className="text-white" size={24} />
+                  </button>
+                  
             {/* Main Content */}
             <div className="w-3/4 p-6">
                 <h1 className="text-4xl font-bold mb-4">{fieldName}</h1>
@@ -149,15 +171,33 @@ export default function Catalogue() {
 
                 {/* Grid of Crops */}
                 <div className="grid grid-cols-3 gap-4">
-                    {crops.map((crop) => (
+                {crops.length > 0 ? (
+                    crops.map((crop) => (
                         <div key={crop.idcrops} className="border p-4 rounded-lg">
-                            <img src={crop.imagen || null} alt={crop.cultivo} className="w-full h-48 object-cover rounded-lg" />
-                            <h3 className="text-xl font-semibold">{crop.cultivo}</h3>
-                            <p>{crop.descripcion}</p>
-                            <p><strong>Número de Lote:</strong> {crop.numero_lote}</p>
-                            <p><strong>Ubicación:</strong> {crop.location}</p>
+                        <img src={crop.imagen || null} alt={crop.cultivo} className="w-full h-48 object-contain rounded-lg" />
+                        <h3 className="text-xl font-semibold">{crop.cultivo}</h3>
+                        <p>{crop.descripcion}</p>
+                        <p><strong>Número de Lote:</strong> {crop.numero_lote}</p>
+                        <p><strong>Ubicación:</strong> {crop.location}</p>
+                        
+                        {/* Display QR Code image */}
+                        {crop.qr_code_url ? (
+                            <img src={crop.qr_code_url} alt="QR Code" className="mt-2" />
+                        ) : (
+                            <p>No QR code available</p>
+                        )}
+                        
+                        {/* Added button to navigate to crop details */}
+                        <button
+                            onClick={() => navigate(`/${id}/crop-details/${crop.idcrops}`)}
+                            className="mt-2 text-blue-600 hover:underline">
+                            Ver Detalles
+                        </button>
                         </div>
-                    ))}
+                    ))
+                ) : (
+                    <h1>No tienes cosechas</h1>
+                )}
                 </div>
             </div>
         </div>

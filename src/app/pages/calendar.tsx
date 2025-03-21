@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
 
 export default function Calendar() {
     const { id } = useParams();
@@ -9,6 +9,15 @@ export default function Calendar() {
     const [userName, setUserName] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+
+    // Handler function to log out
+    const handleLogout = () => {
+        // Clear the user data from localStorage
+        localStorage.removeItem('username');
+        localStorage.removeItem('userId');
+        
+        navigate('/');
+    };
 
     useEffect(() => {
         if (id) {
@@ -80,6 +89,14 @@ export default function Calendar() {
                 </div>
             </div>
 
+            {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                  >
+                    <FaSignOutAlt className="text-white" size={24} />
+                  </button>
+                  
             {/* Main Content */}
             <div className="w-3/4 p-6">
                 <h1 className="text-4xl font-bold mb-4">{fieldName}</h1>

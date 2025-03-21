@@ -9,6 +9,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { FaSignOutAlt } from 'react-icons/fa';
 
 const googleMapsApiKey = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E';
 
@@ -32,7 +33,15 @@ export default function Campo() {
     }
   }, []);
 
-  // Handler function to submit form data
+  // Handler function to log out
+  const handleLogout = () => {
+    // Clear the user data from localStorage
+    localStorage.removeItem('username');
+    localStorage.removeItem('userId');
+    
+    navigate('/');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Submitting farm data...");
@@ -42,7 +51,6 @@ export default function Campo() {
       return;
     }
 
-    // Ensure fields have been filled
     if (!nombre || !cantidadHa || !latitud || !longitud) {
       console.error("All fields must be filled.");
       return;
@@ -94,6 +102,15 @@ export default function Campo() {
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <h1>Cuéntanos sobre tu campo</h1>
       <h2>Bienvenido, {username}!</h2> {/* Display the username */}
+
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+      >
+        <FaSignOutAlt className="text-white" size={24} />
+      </button>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label htmlFor="nombre">Nombre del campo:</label>

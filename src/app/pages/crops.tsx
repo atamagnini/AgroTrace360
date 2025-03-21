@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
 
 export default function Crops() {
     const { id } = useParams();
@@ -15,7 +15,53 @@ export default function Crops() {
     const [lon, setLon] = useState<number | null>(null);
     const [showForm, setShowForm] = useState<boolean>(false);
     const [crops, setCrops] = useState<any[]>([]);
-  
+
+    const toBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+      });
+    };
+    
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        try {
+          // Convert the image to Base64
+          const base64Image = await toBase64(file);
+          
+          setFormData({
+            ...formData,
+            imagen: base64Image,
+          });
+        } catch (error) {
+          console.error("Error converting image to base64:", error);
+        }
+      }
+    };
+    
+
+    const uploadImageToS3 = async (file: File) => {
+      // Logic to upload image to S3
+      const s3Url = await axios.post('your-lambda-api-to-upload-image', file, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return s3Url.data.imageUrl; // Replace with the response from your Lambda API
+    };
+    
+    // Handler function to log out
+    const handleLogout = () => {
+      // Clear the user data from localStorage
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      
+      navigate('/');
+    };
+
     // Form state
     const [formData, setFormData] = useState({
         cultivo: '',
@@ -161,52 +207,85 @@ export default function Crops() {
     };
     
     const handleSubmit = async () => {
-        try {
-          const response = await axios.post(
-            'https://axzrjq6ya9.execute-api.us-east-1.amazonaws.com/add-crop/add-crop', 
-            formData,
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-          if (response.status === 200) {
-            alert('Cultivo added successfully');
-            setShowForm(false); // Close the form after successful submission
-            
-            // Reset the form data to clear the inputs
-            setFormData({
-                cultivo: '',
-                descripcion: '',
-                numero_lote: '',
-                tipo_semilla: '',
-                fecha_siembra: '',
-                fecha_estimada_cosecha: '',
-                cantidad_siembra: '',
-                unidad_siembra: '',
-                notas: '',
-                estado: '',
-                fecha_estado: '',
-                fecha_cosecha: '',
-                cantidad_cosecha: '',
-                unidad_cosecha: '',
-                imagen: '',
-                idcuentas: id || '',  // Automatically use the user id from params
-                idcampo: formData.idcampo || '',  // Keep the idcampo value after reset
-            });
+      try {
+        let imageUrl = "";
     
-            // Ensure that id and idcampo are available before refreshing the crops data
-            if (id && formData.idcampo) {
-              fetchCropsData(id, formData.idcampo);  // Refresh the crops table
-            } else {
-              console.error('Missing id or idcampo');
+        // Only upload the image if it exists
+        if (formData.imagen) {
+          const imageUploadResponse = await axios.post(
+            'https://wuk3ueg3wk.execute-api.us-east-1.amazonaws.com/upload-image/upload-image',
+            {
+              base64Image: formData.imagen,
             }
-            
-          } else {
-            alert('Failed to add cultivo');
-          }
-        } catch (error) {
-          alert('Error submitting the form');
-        }
-    };
+          );
     
+          // Log the entire response
+          console.log('Lambda 1 response:', imageUploadResponse.data); 
+    
+          // Ensure you parse the body if it's a JSON string and extract the imageUrl
+          if (imageUploadResponse.status === 200) {
+            const responseBody = JSON.parse(imageUploadResponse.data.body); // Parse the response body
+            imageUrl = responseBody.imageUrl;  // Access the imageUrl after parsing the body
+          } else {
+            alert('Failed to upload image');
+            return;
+          }
+        }
+    
+        console.log('Sending crop data to Lambda 2:', imageUrl); // Log the imageUrl before sending to Lambda 2
+    
+        // Add the imageUrl to the formData to pass to Lambda 2
+        const cropData = {
+          ...formData,
+          imageUrl: imageUrl,  // Pass the image URL to Lambda 2
+        };
+    
+        // Now call Lambda 2 to add the crop data and save it to the database
+        const response = await axios.post(
+          'https://axzrjq6ya9.execute-api.us-east-1.amazonaws.com/add-crop/add-crop',
+          cropData,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+    
+        if (response.status === 200) {
+          alert('Cultivo added successfully');
+          setShowForm(false);
+    
+          // Reset the form data
+          setFormData({
+            cultivo: '',
+            descripcion: '',
+            numero_lote: '',
+            tipo_semilla: '',
+            fecha_siembra: '',
+            fecha_estimada_cosecha: '',
+            cantidad_siembra: '',
+            unidad_siembra: '',
+            notas: '',
+            estado: '',
+            fecha_estado: '',
+            fecha_cosecha: '',
+            cantidad_cosecha: '',
+            unidad_cosecha: '',
+            imagen: '',
+            idcuentas: id || '',
+            idcampo: formData.idcampo || '',
+          });
+    
+          if (id && formData.idcampo) {
+            fetchCropsData(id, formData.idcampo);
+          } else {
+            console.error('Missing id or idcampo');
+          }
+        } else {
+          alert('Failed to add cultivo');
+        }
+      } catch (error) {
+        console.error("Error submitting the form:", error);
+        alert('Error submitting the form');
+      }
+    };          
+
       
     if (loading) {
       return <p>Loading...</p>;
@@ -276,7 +355,15 @@ export default function Crops() {
                     </button>
             </div>
           </div>
-    
+
+          {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                >
+                  <FaSignOutAlt className="text-white" size={24} />
+                </button>
+
           {/* Main Content */}
           <div className="w-3/4 p-6">
             <h1 className="text-4xl font-bold mb-4">{fieldName}</h1>
@@ -411,12 +498,10 @@ export default function Crops() {
                         className="w-full p-2 mb-2 border"
                         />
                         <input
-                        type="text"
-                        name="imagen"
-                        placeholder="Imagen URL"
-                        value={formData.imagen}
-                        onChange={handleInputChange}
-                        className="w-full p-2 mb-2 border"
+                          type="file"
+                          name="imagen"
+                          onChange={handleImageUpload}
+                          className="w-full p-2 mb-2 border"
                         />
                     </>
                     )}
@@ -468,7 +553,7 @@ export default function Crops() {
                     ) : (
                         <tr>
                         <td colSpan={6} className="px-6 py-4 text-center">
-                            No crops data available
+                            No tienes cultivos
                         </td>
                         </tr>
                     )}
