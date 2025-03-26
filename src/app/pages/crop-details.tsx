@@ -8,6 +8,7 @@ export default function CropDetails() {
   const [crop, setCrop] = useState<any>(null);
   const [error, setError] = useState<string>('');
 
+  
   // Fetch crop details by ID
   useEffect(() => {
     const fetchCropDetails = async () => {
@@ -40,11 +41,22 @@ export default function CropDetails() {
     return <div>Loading crop details...</div>;
   }
 
-  // Format the dates (if they exist)
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString || dateString === "0000-00-00") return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "N/A";
+      
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return "N/A";
+    }
   };
 
   console.log("QR Code URL:", crop.qr_code_url);  // Debugging the qr_code_url

@@ -1,3 +1,4 @@
+//welcome.tsx
 import React, {useState} from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -90,15 +91,14 @@ export default function Landing() {
     }
   };
 
-  // Login Form Submission Handler
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     const loginData = {
       nombre_usuario: username,
       contraseña: password,
     };
-
+  
     try {
       const response = await axios.post(
         'https://lksb5xp9g4.execute-api.us-east-1.amazonaws.com/login/login',
@@ -109,16 +109,39 @@ export default function Landing() {
           },
         }
       );
-
+  
       const responseBody = JSON.parse(response.data.body);
-
+  
       if (response.status === 200 && responseBody.idcuentas) {
         // Save user details to localStorage or sessionStorage
         localStorage.setItem('username', username);
         localStorage.setItem('userId', responseBody.idcuentas);
-
-        closeLoginModal();
-        navigate(`/${responseBody.idcuentas}/overviewField`);
+  
+        // Fetch the user's fields after login
+        const fieldResponse = await axios.post(
+          'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
+          { idcuentas: responseBody.idcuentas },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+  
+        const fieldData = JSON.parse(fieldResponse.data.body);
+  
+        if (fieldData.length > 0) {
+          const firstField = fieldData[0];
+          const firstFieldId = firstField.idcampo;
+  
+          closeLoginModal();
+          
+          // Redirect to overview page with the first field's ID and trigger field data fetch
+          navigate(`/${responseBody.idcuentas}/overviewField?idcampo=${firstFieldId}`);
+        } else {
+          // If no fields exist, redirect to add fields page
+          navigate(`/${responseBody.idcuentas}/addFields`);
+        }
       } else {
         alert('Invalid username or password');
       }
@@ -127,6 +150,7 @@ export default function Landing() {
       alert('Error during login');
     }
   };
+ 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">

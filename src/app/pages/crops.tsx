@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt } from 'react-icons/fa';
 
 export default function Crops() {
     const { id } = useParams();
@@ -15,6 +15,7 @@ export default function Crops() {
     const [lon, setLon] = useState<number | null>(null);
     const [showForm, setShowForm] = useState<boolean>(false);
     const [crops, setCrops] = useState<any[]>([]);
+    const [selectedField, setSelectedField] = useState<string | null>(null);
 
     const toBase64 = (file: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -101,11 +102,37 @@ export default function Crops() {
     };
 
     useEffect(() => {
-      // If the id is present, fetch data from the API
-      if (id) {
-        fetchFieldData(id);
+      const queryParams = new URLSearchParams(location.search);
+      const fieldId = queryParams.get('idcampo');
+  
+      if (fieldId) {
+          // Replace placeholder with actual field data fetch
+          const fetchFieldDetails = async () => {
+              try {
+                  const response = await axios.post(
+                      'https://0ddnllnpb5.execute-api.us-east-1.amazonaws.com/get-first-field/get-first-field',
+                      { idcuentas: id, idcampo: fieldId },
+                      { headers: { 'Content-Type': 'application/json' } }
+                  );
+                  
+                  const data = JSON.parse(response.data.body);
+                  if (data.length > 0) {
+                      const field = data[0];
+                      setFieldName(field.nombre || 'No field name available');
+                      setUserName(field.nombre_usuario || 'No user name available');
+                      setSelectedField(fieldId);
+                  }
+                  setLoading(false);
+              } catch (error) {
+                  console.error('Error fetching field details:', error);
+                  setError('Failed to fetch field details');
+                  setLoading(false);
+              }
+          };
+  
+          fetchFieldDetails();
       }
-    }, [id]);
+  }, [id, location.search]);
 
     useEffect(() => {
         if (id && formData.idcampo) { 
@@ -206,6 +233,26 @@ export default function Crops() {
         setShowForm(false); // Close the form when "Cancelar" is clicked
     };
     
+    const formatDateLatinAmerican = (dateString: string | null | undefined): string => {
+      if (!dateString || dateString === "0000-00-00") return '';
+      
+      try {
+        const date = new Date(dateString);
+        // Check if date is valid
+        if (isNaN(date.getTime())) return dateString;
+        
+        // Format as DD/MM/YYYY (Latin American style)
+        return date.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return dateString;
+      }
+    };
+    
     const handleSubmit = async () => {
       try {
         let imageUrl = "";
@@ -219,28 +266,24 @@ export default function Crops() {
             }
           );
     
-          // Log the entire response
           console.log('Lambda 1 response:', imageUploadResponse.data); 
-    
-          // Ensure you parse the body if it's a JSON string and extract the imageUrl
+  
           if (imageUploadResponse.status === 200) {
-            const responseBody = JSON.parse(imageUploadResponse.data.body); // Parse the response body
-            imageUrl = responseBody.imageUrl;  // Access the imageUrl after parsing the body
+            const responseBody = JSON.parse(imageUploadResponse.data.body); 
+            imageUrl = responseBody.imageUrl;
           } else {
             alert('Failed to upload image');
             return;
           }
         }
     
-        console.log('Sending crop data to Lambda 2:', imageUrl); // Log the imageUrl before sending to Lambda 2
-    
-        // Add the imageUrl to the formData to pass to Lambda 2
+        console.log('Sending crop data to Lambda 2:', imageUrl); 
+        
         const cropData = {
           ...formData,
-          imageUrl: imageUrl,  // Pass the image URL to Lambda 2
+          imageUrl: imageUrl, 
         };
     
-        // Now call Lambda 2 to add the crop data and save it to the database
         const response = await axios.post(
           'https://axzrjq6ya9.execute-api.us-east-1.amazonaws.com/add-crop/add-crop',
           cropData,
@@ -294,22 +337,34 @@ export default function Crops() {
     if (error) {
       return <p>Error: {error}</p>;
     }
-    
-    const handleCatalogoClick = () => {
-        navigate(`/${id}/catalogue`);
-    };
 
-    const handleReportesClick = () => {
-        navigate(`/${id}/reports`);
-    };
+    const handleDashboardClick = () => {
+      navigate(`/${id}/dashboard?idcampo=${selectedField}`);
+  };
+  
+  const handleOverviewClick = () => {
+      navigate(`/${id}/overviewField?idcampo=${selectedField}`);
+  };
 
-    const handleCalendarioClick = () => {
-        navigate(`/${id}/calendar`);
-    };
+  const handleCultivosClick = () => {
+      navigate(`/${id}/crops?idcampo=${selectedField}`);
+  };
 
-    const handleSeguimientoClick = () => {
-        navigate(`/${id}/tracking`);
-    };
+  const handleCatalogoClick = () => {
+    navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+  };
+
+const handleReportesClick = () => {
+    navigate(`/${id}/reports?idcampo=${selectedField}`);
+};
+
+  const handleCalendarioClick = () => {
+      navigate(`/${id}/calendar?idcampo=${selectedField}`);
+  };
+
+  const handleSeguimientoClick = () => {
+      navigate(`/${id}/tracking?idcampo=${selectedField}`);
+  };
   
     if (loading) {
       return <p>Loading...</p>;
@@ -324,36 +379,49 @@ export default function Crops() {
           {/* Sidebar with buttons */}
           <div className="w-1/4 bg-gray-800 text-white p-6">
             <div className="flex flex-col space-y-4">
-                    <button
-                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                        <FaChartBar className="text-white" />
-                        <span>Cultivos</span>
-                    </button>
-                    <button 
-                        onClick={handleSeguimientoClick}
-                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                        <FaSearch className="text-white" />
-                        <span>Seguimiento</span>
-                    </button>
-                    <button 
-                        onClick={handleCalendarioClick}
-                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                        <FaRegCalendarAlt className="text-white" />
-                        <span>Calendario</span>
-                    </button>
-                    <button 
-                        onClick={handleReportesClick} 
-                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                        <FaFileAlt className="text-white" />
-                        <span>Reportes</span>
-                    </button>
-                    <button
-                        onClick={handleCatalogoClick} 
-                        className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                        <FaRegListAlt className="text-white" />
-                        <span>Catálogo</span>
-                    </button>
-            </div>
+                                <button 
+                                    onClick={handleDashboardClick}
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaHome className="text-white" />
+                                    <span>Panel de Actividades</span>
+                                </button>
+                                <button 
+                                    onClick={handleOverviewClick}
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaMapMarkerAlt className="text-white" />
+                                    <span>Ubicación</span>
+                                </button>
+                                <button 
+                                    onClick={handleCultivosClick}
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaChartBar className="text-white" />
+                                    <span>Cultivos</span>
+                                </button>
+                                <button 
+                                    onClick={handleSeguimientoClick}
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaSearch className="text-white" />
+                                    <span>Seguimiento</span>
+                                </button>
+                                <button 
+                                    onClick={handleCalendarioClick}
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaRegCalendarAlt className="text-white" />
+                                    <span>Calendario</span>
+                                </button>
+                                <button 
+                                    onClick={handleReportesClick} 
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaFileAlt className="text-white" />
+                                    <span>Reportes</span>
+                                </button>
+                                <button
+                                    onClick={handleCatalogoClick} 
+                                    className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
+                                    <FaRegListAlt className="text-white" />
+                                    <span>Catálogo</span>
+                                </button>
+                            </div>
           </div>
 
           {/* Logout Button */}
@@ -539,24 +607,24 @@ export default function Crops() {
                   </tr>
                 </thead>
                 <tbody>
-                    {Array.isArray(crops) && crops.length > 0 ? (
-                        crops.map((crop) => (
-                        <tr key={crop.idcrops}>
-                            <td className="px-6 py-4 border-t border-gray-200">{crop.cultivo}</td>
-                            <td className="px-6 py-4 border-t border-gray-200">{crop.estado}</td>
-                            <td className="px-6 py-4 border-t border-gray-200">{crop.fecha_siembra}</td>
-                            <td className="px-6 py-4 border-t border-gray-200">{crop.fecha_cosecha}</td>
-                            <td className="px-6 py-4 border-t border-gray-200">{crop.cantidad_cosecha}</td>
-                            <td className="px-6 py-4 border-t border-gray-200">Detalles</td>
-                        </tr>
-                        ))
-                    ) : (
-                        <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center">
-                            No tienes cultivos
-                        </td>
-                        </tr>
-                    )}
+                  {Array.isArray(crops) && crops.length > 0 ? (
+                    crops.map((crop) => (
+                      <tr key={crop.idcrops}>
+                        <td className="px-6 py-4 border-t border-gray-200">{crop.cultivo}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">{crop.estado}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">{formatDateLatinAmerican(crop.fecha_siembra)}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">{formatDateLatinAmerican(crop.fecha_cosecha)}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">{crop.cantidad_cosecha}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">Detalles</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 text-center">
+                        No tienes cultivos
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
 
               </table>

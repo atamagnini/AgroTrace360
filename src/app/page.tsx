@@ -12,6 +12,7 @@ import Tracking from "./pages/tracking";
 import Reports from "./pages/reports";
 import Calendar from "./pages/calendar";
 import CropDetails from "./pages/crop-details";
+import Dashboard from "./pages/dashboard";
 
 export default function Page() {
   const [isClient, setIsClient] = useState(false);
@@ -38,6 +39,7 @@ export default function Page() {
         <Route path="/:id/tracking" element={<Tracking />} />
         <Route path="/:id/reports" element={<Reports />} />
         <Route path="/:id/calendar" element={<Calendar />} />
+        <Route path="/:id/dashboard" element={<Dashboard />} />
         <Route path="/:id/crop-details/:cropId" element={<CropDetails />} />
       </Routes>
     </BrowserRouter>
