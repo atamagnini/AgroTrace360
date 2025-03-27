@@ -104,7 +104,7 @@ export default function Crops() {
     useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const fieldId = queryParams.get('idcampo');
-  
+    
       if (fieldId) {
           // Replace placeholder with actual field data fetch
           const fetchFieldDetails = async () => {
@@ -121,6 +121,9 @@ export default function Crops() {
                       setFieldName(field.nombre || 'No field name available');
                       setUserName(field.nombre_usuario || 'No user name available');
                       setSelectedField(fieldId);
+                      
+                      // Add this line to trigger crops data fetch
+                      fetchCropsData(id!, fieldId);
                   }
                   setLoading(false);
               } catch (error) {
@@ -129,10 +132,10 @@ export default function Crops() {
                   setLoading(false);
               }
           };
-  
+    
           fetchFieldDetails();
       }
-  }, [id, location.search]);
+    }, [id, location.search]);
 
     useEffect(() => {
         if (id && formData.idcampo) { 
@@ -351,12 +354,14 @@ export default function Crops() {
   };
 
   const handleCatalogoClick = () => {
-    navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+    localStorage.setItem('lastSelectedField', selectedField || '');
+    navigate(`/${id}/catalogue`);
   };
 
-const handleReportesClick = () => {
-    navigate(`/${id}/reports?idcampo=${selectedField}`);
-};
+  const handleReportesClick = () => {
+    localStorage.setItem('lastSelectedField', selectedField || '');
+    navigate(`/${id}/reports`);
+  };
 
   const handleCalendarioClick = () => {
       navigate(`/${id}/calendar?idcampo=${selectedField}`);

@@ -56,9 +56,8 @@ export default function Dashboard() {
     useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const fieldId = queryParams.get('idcampo');
-  
+    
       if (fieldId) {
-          // Replace placeholder with actual field data fetch
           const fetchFieldDetails = async () => {
               try {
                   const response = await axios.post(
@@ -73,6 +72,9 @@ export default function Dashboard() {
                       setFieldName(field.nombre || 'No field name available');
                       setUserName(field.nombre_usuario || 'No user name available');
                       setSelectedField(fieldId);
+                      
+                      // Add this line to trigger crop data fetch
+                      fetchCurrentCrops(id!, fieldId);
                   }
                   setLoading(false);
               } catch (error) {
@@ -81,10 +83,13 @@ export default function Dashboard() {
                   setLoading(false);
               }
           };
-  
+    
           fetchFieldDetails();
+      } else {
+          // If no fieldId in URL, use the original method to fetch field data
+          fetchFieldData(id!);
       }
-  }, [id, location.search]);
+    }, [id, location.search]);
       
       const fetchFieldData = async (userId: string) => {
         try {
@@ -144,12 +149,14 @@ export default function Dashboard() {
     };
 
     const handleCatalogoClick = () => {
-      navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+      localStorage.setItem('lastSelectedField', selectedField || '');
+      navigate(`/${id}/catalogue`);
     };
 
-  const handleReportesClick = () => {
-      navigate(`/${id}/reports?idcampo=${selectedField}`);
-  };
+    const handleReportesClick = () => {
+      localStorage.setItem('lastSelectedField', selectedField || '');
+      navigate(`/${id}/reports`);
+    };
 
     const handleCalendarioClick = () => {
         navigate(`/${id}/calendar?idcampo=${selectedField}`);

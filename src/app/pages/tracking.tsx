@@ -81,7 +81,6 @@ export default function Tracking() {
                 setFieldName(field.nombre || 'No field name available');
                 setUserName(field.nombre_usuario || 'No user name available');
                 
-                // Important: Update formData with the correct idcampo from the API
                 setFormData(prevData => ({
                     ...prevData,
                     idcampo: field.idcampo
@@ -89,7 +88,6 @@ export default function Tracking() {
                 
                 setLoading(false);
     
-                // Use the idcampo from the field data, not from route params
                 if (field.idcampo) {
                     console.log("Fetching crops with field ID:", field.idcampo);
                     fetchCropsData(userId, field.idcampo);
@@ -413,53 +411,62 @@ export default function Tracking() {
     const handleCropChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const cropId = event.target.value;
         setSelectedCrop(cropId);
-        
+    
+        // Use the route parameter or the existing formData's idcampo
+        const effectiveFieldId = idcampo || formData.idcampo;
+        const effectiveUserId = id || '';
+    
         if (cropId === "all") {
-            // When "All" is selected, clear the specific crop data
             setSelectedCropData(null);
-            
-            const actualFieldId = idcampo || formData.idcampo;
-            
-            // Update form data objects with field ID but no specific crop
+    
             setFormData(prevData => ({
                 ...prevData,
                 idcrops: "",
-                idcampo: actualFieldId
+                idcampo: effectiveFieldId
             }));
-            
+    
             setInputFormData(prevData => ({
                 ...prevData,
                 idcrops: "",
-                idcampo: actualFieldId
+                idcampo: effectiveFieldId
             }));
-            
-            // Fetch treatments and inputs for all crops in this field
-            if (id && actualFieldId) {
-                fetchAllTreatments(id, actualFieldId);
-                fetchAllInputs(id, actualFieldId);
+    
+            if (effectiveUserId && effectiveFieldId) {
+                fetchAllTreatments(effectiveUserId, effectiveFieldId);
+                fetchAllInputs(effectiveUserId, effectiveFieldId);
             }
         } else if (cropId) {
-            // Original code for selecting a specific crop
             const cropData = crops.find(crop => crop.idcrops.toString() === cropId);
             setSelectedCropData(cropData);
-            
-            const actualFieldId = idcampo || formData.idcampo;
-            
+    
             setFormData(prevData => ({
                 ...prevData,
                 idcrops: cropId,
-                idcampo: actualFieldId
+                idcampo: effectiveFieldId
             }));
-            
+    
             setInputFormData(prevData => ({
                 ...prevData,
                 idcrops: cropId,
-                idcampo: actualFieldId
+                idcampo: effectiveFieldId
             }));
-            
-            if (id && actualFieldId) {
-                fetchTreatmentData(id, actualFieldId, cropId);
-                fetchInputData(id, actualFieldId, cropId);
+    
+            if (effectiveUserId && effectiveFieldId && cropId) {
+                console.log("Fetching treatments/inputs with:", {
+                    userId: effectiveUserId, 
+                    fieldId: effectiveFieldId, 
+                    cropId: cropId
+                });
+    
+                // Fetch treatments and inputs after selecting a crop
+                fetchTreatmentData(effectiveUserId, effectiveFieldId, cropId);
+                fetchInputData(effectiveUserId, effectiveFieldId, cropId);
+            } else {
+                console.warn("Missing parameters for fetching data", {
+                    userId: effectiveUserId, 
+                    fieldId: effectiveFieldId, 
+                    cropId: cropId
+                });
             }
         } else {
             setSelectedCropData(null);
@@ -467,7 +474,7 @@ export default function Tracking() {
             setInputs([]);
         }
     };
-
+    
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
       ) => {
@@ -619,9 +626,8 @@ export default function Tracking() {
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const fieldId = queryParams.get('idcampo');
-    
-        if (fieldId) {
-            // Replace placeholder with actual field data fetch
+        
+        if (fieldId && id) {
             const fetchFieldDetails = async () => {
                 try {
                     const response = await axios.post(
@@ -629,13 +635,22 @@ export default function Tracking() {
                         { idcuentas: id, idcampo: fieldId },
                         { headers: { 'Content-Type': 'application/json' } }
                     );
-                    
+    
                     const data = JSON.parse(response.data.body);
                     if (data.length > 0) {
                         const field = data[0];
                         setFieldName(field.nombre || 'No field name available');
                         setUserName(field.nombre_usuario || 'No user name available');
                         setSelectedField(fieldId);
+    
+                        // Update formData with the field data
+                        setFormData((prevData) => ({
+                            ...prevData,
+                            idcampo: field.idcampo || formData.idcampo // Ensure idcampo is updated here
+                        }));
+    
+                        // Fetch crops after field data is fetched
+                        fetchCropsData(id, fieldId); 
                     }
                     setLoading(false);
                 } catch (error) {
@@ -648,13 +663,16 @@ export default function Tracking() {
             fetchFieldDetails();
         }
     }, [id, location.search]);
+    
+      
 
 
     useEffect(() => {
         if (id && idcampo) {
             fetchCropsData(id, idcampo); 
         }
-    }, [id, idcampo]);
+    }, [id, idcampo, activeTab]);
+   
 
     const handleLogout = () => {
         localStorage.removeItem('username');
@@ -675,12 +693,14 @@ export default function Tracking() {
     };
 
     const handleCatalogoClick = () => {
-      navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+        localStorage.setItem('lastSelectedField', selectedField || '');
+        navigate(`/${id}/catalogue`);
     };
 
-  const handleReportesClick = () => {
-      navigate(`/${id}/reports?idcampo=${selectedField}`);
-  };
+    const handleReportesClick = () => {
+        localStorage.setItem('lastSelectedField', selectedField || '');
+        navigate(`/${id}/reports`);
+    };
 
     const handleCalendarioClick = () => {
         navigate(`/${id}/calendar?idcampo=${selectedField}`);

@@ -196,7 +196,8 @@ export default function OverviewField() {
     };
 
     const handleCatalogoClick = () => {
-        navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+        localStorage.setItem('lastSelectedField', selectedField || '');
+        navigate(`/${id}/catalogue`);
     };
 
     const handleReportesClick = () => {

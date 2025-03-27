@@ -67,12 +67,14 @@ export default function Calendar() {
     };
 
     const handleCatalogoClick = () => {
-      navigate(`/${id}/catalogue?idcampo=${selectedField}`);
+        localStorage.setItem('lastSelectedField', selectedField || '');
+        navigate(`/${id}/catalogue`);
     };
 
-  const handleReportesClick = () => {
-      navigate(`/${id}/reports?idcampo=${selectedField}`);
-  };
+    const handleReportesClick = () => {
+        localStorage.setItem('lastSelectedField', selectedField || '');
+        navigate(`/${id}/reports`);
+    };
 
     const handleCalendarioClick = () => {
         navigate(`/${id}/calendar?idcampo=${selectedField}`);

@@ -1,3 +1,5 @@
+//catalogue.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt,FaHome, FaMapMarkerAlt } from 'react-icons/fa';
@@ -16,16 +18,14 @@ export default function Catalogue() {
 
     const googleApiKey = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E'; 
 
-    // Handler function to log out
     const handleLogout = () => {
-        // Clear the user data from localStorage
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
         
         navigate('/');
     };
 
-    useEffect(() => {
+    /* useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const fieldId = queryParams.get('idcampo');
     
@@ -56,9 +56,8 @@ export default function Catalogue() {
     
             fetchFieldDetails();
         }
-    }, [id, location.search]);
+    }, [id, location.search]); */
 
-    // Fetch crops data from the Lambda function
     useEffect(() => {
         const fetchCrops = async () => {
             try {
@@ -128,33 +127,51 @@ export default function Catalogue() {
         }
     }, [crops]);
 
+    useEffect(() => {
+        const lastField = localStorage.getItem('lastSelectedField');
+        if (lastField) {
+          setSelectedField(lastField);
+        }
+    }, []);
+
     const handleDashboardClick = () => {
-        navigate(`/${id}/dashboard?idcampo=${selectedField}`);
-    };
-    
-    const handleOverviewClick = () => {
-        navigate(`/${id}/overviewField?idcampo=${selectedField}`);
-    };
-
-    const handleCultivosClick = () => {
-        navigate(`/${id}/crops?idcampo=${selectedField}`);
-    };
-
-    const handleCatalogoClick = () => {
-      navigate(`/${id}/catalogue?idcampo=${selectedField}`);
-    };
-
-  const handleReportesClick = () => {
-      navigate(`/${id}/reports?idcampo=${selectedField}`);
-  };
-
-    const handleCalendarioClick = () => {
-        navigate(`/${id}/calendar?idcampo=${selectedField}`);
-    };
-
-    const handleSeguimientoClick = () => {
-        navigate(`/${id}/tracking?idcampo=${selectedField}`);
-    };
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/dashboard?idcampo=${lastField}`);
+      };
+      
+      const handleOverviewClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/overviewField?idcampo=${lastField}`);
+      };
+      
+      const handleCultivosClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/crops?idcampo=${lastField}`);
+      };
+      
+      const handleCatalogoClick = () => {
+        // Always ensure lastSelectedField is preserved, even if no current field is selected
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        localStorage.setItem('lastSelectedField', lastField);
+        navigate(`/${id}/catalogue`);
+      };
+      
+      const handleReportesClick = () => {
+        // Always ensure lastSelectedField is preserved, even if no current field is selected
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        localStorage.setItem('lastSelectedField', lastField);
+        navigate(`/${id}/reports`);
+      };
+      
+      const handleCalendarioClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/calendar?idcampo=${lastField}`);
+      };
+      
+      const handleSeguimientoClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/tracking?idcampo=${lastField}`);
+      };
 
     if (loading) {
         return <div>Loading...</div>;

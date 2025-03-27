@@ -1,3 +1,5 @@
+//reports.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt } from 'react-icons/fa';
@@ -12,7 +14,6 @@ export default function Reports() {
     const [error, setError] = useState<string>('');
     const [selectedField, setSelectedField] = useState<string | null>(null);
 
-    // Handler function to log out
     const handleLogout = () => {
         // Clear the user data from localStorage
         localStorage.removeItem('username');
@@ -22,64 +23,53 @@ export default function Reports() {
     };
 
     useEffect(() => {
-        const queryParams = new URLSearchParams(location.search);
-        const fieldId = queryParams.get('idcampo');
-    
-        if (fieldId) {
-            const fetchFieldDetails = async () => {
-                try {
-                    const response = await axios.post(
-                        'https://0ddnllnpb5.execute-api.us-east-1.amazonaws.com/get-first-field/get-first-field',
-                        { idcuentas: id, idcampo: fieldId },
-                        { headers: { 'Content-Type': 'application/json' } }
-                    );
-                    
-                    const data = JSON.parse(response.data.body);
-                    if (data.length > 0) {
-                        const field = data[0];
-                        setFieldName(field.nombre || 'No field name available');
-                        setUserName(field.nombre_usuario || 'No user name available');
-                        setSelectedField(fieldId);
-                    }
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Error fetching field details:', error);
-                    setError('Failed to fetch field details');
-                    setLoading(false);
-                }
-            };
-    
-            fetchFieldDetails();
+        const lastField = localStorage.getItem('lastSelectedField');
+        
+        if (lastField) {
+            setLoading(false);
+        } else {
+            setLoading(false);
         }
-    }, [id, location.search]);
+    }, [id]);
 
     const handleDashboardClick = () => {
-        navigate(`/${id}/dashboard?idcampo=${selectedField}`);
-    };
-    
-    const handleOverviewClick = () => {
-        navigate(`/${id}/overviewField?idcampo=${selectedField}`);
-    };
-
-    const handleCultivosClick = () => {
-        navigate(`/${id}/crops?idcampo=${selectedField}`);
-    };
-
-    const handleCatalogoClick = () => {
-      navigate(`/${id}/catalogue?idcampo=${selectedField}`);
-    };
-
-  const handleReportesClick = () => {
-      navigate(`/${id}/reports?idcampo=${selectedField}`);
-  };
-
-    const handleCalendarioClick = () => {
-        navigate(`/${id}/calendar?idcampo=${selectedField}`);
-    };
-
-    const handleSeguimientoClick = () => {
-        navigate(`/${id}/tracking?idcampo=${selectedField}`);
-    };
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/dashboard?idcampo=${lastField}`);
+      };
+      
+      const handleOverviewClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/overviewField?idcampo=${lastField}`);
+      };
+      
+      const handleCultivosClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/crops?idcampo=${lastField}`);
+      };
+      
+      const handleCatalogoClick = () => {
+        // Always ensure lastSelectedField is preserved, even if no current field is selected
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        localStorage.setItem('lastSelectedField', lastField);
+        navigate(`/${id}/catalogue`);
+      };
+      
+      const handleReportesClick = () => {
+        // Always ensure lastSelectedField is preserved, even if no current field is selected
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        localStorage.setItem('lastSelectedField', lastField);
+        navigate(`/${id}/reports`);
+      };
+      
+      const handleCalendarioClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/calendar?idcampo=${lastField}`);
+      };
+      
+      const handleSeguimientoClick = () => {
+        const lastField = localStorage.getItem('lastSelectedField') || '';
+        navigate(`/${id}/tracking?idcampo=${lastField}`);
+      };
 
     if (loading) {
         return <div>Loading...</div>;
