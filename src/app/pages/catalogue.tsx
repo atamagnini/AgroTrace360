@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt,FaHome, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt,FaHome, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
 import axios from 'axios';
 
 export default function Catalogue() {
@@ -189,7 +189,7 @@ export default function Catalogue() {
                                     <button 
                                         onClick={handleDashboardClick}
                                         className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                                        <FaHome className="text-white" />
+                                        <FaChartBar className="text-white" />
                                         <span>Panel de Actividades</span>
                                     </button>
                                     <button 
@@ -201,7 +201,7 @@ export default function Catalogue() {
                                     <button 
                                         onClick={handleCultivosClick}
                                         className="flex items-center space-x-3 bg-gray-700 p-3 rounded hover:bg-blue-600">
-                                        <FaChartBar className="text-white" />
+                                        <FaSeedling className="text-white" />
                                         <span>Cultivos</span>
                                     </button>
                                     <button 
