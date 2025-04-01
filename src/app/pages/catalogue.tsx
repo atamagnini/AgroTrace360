@@ -241,9 +241,10 @@ export default function Catalogue() {
                   
             {/* Main Content */}
             <div className="w-3/4 p-6">
-                <h1 className="text-4xl font-bold mb-4">{fieldName}</h1>
+                <h1 className="text-4xl font-bold mb-4">Catálogo</h1>
                 <h2 className="text-2xl font-bold mb-4">{userName}</h2>
 
+                
                 {/* Grid of Crops */}
                 <div className="grid grid-cols-3 gap-4">
                 {crops.length > 0 ? (

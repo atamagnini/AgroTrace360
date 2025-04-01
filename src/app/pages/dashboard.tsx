@@ -22,6 +22,8 @@ export default function Dashboard() {
     }
     const [currentCrops, setCurrentCrops] = useState<any[]>([]);
     const [selectedField, setSelectedField] = useState<string | null>(null);
+    
+    const [upcomingActions, setUpcomingActions] = useState<any[]>([]);
 
     const fetchCurrentCrops = async (userId: string, fieldId: string) => {
         try {
@@ -44,9 +46,28 @@ export default function Dashboard() {
         }
       };
       
-    // Handler function to log out
+      const fetchUpcomingActions = async (userId: string, fieldId: string) => {
+        try {
+          const response = await axios.post(
+            'https://u8ixzl5vj9.execute-api.us-east-1.amazonaws.com/get-dates/get-dates',
+            { idcuentas: userId, idcampo: fieldId },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          const data = JSON.parse(response.data.body);
+          if (response.status === 200 && data.length > 0) {
+            const futureActions = data.filter((item: any) => 
+              item.fecha_tratamiento && new Date(item.fecha_tratamiento) > new Date()
+            );
+            setUpcomingActions(futureActions);
+          } else {
+            setUpcomingActions([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch upcoming actions:', error);
+        }
+      };
+
     const handleLogout = () => {
-        // Clear the user data from localStorage
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
         
@@ -75,6 +96,7 @@ export default function Dashboard() {
                       
                       // Add this line to trigger crop data fetch
                       fetchCurrentCrops(id!, fieldId);
+                      fetchUpcomingActions(id!, fieldId);
                   }
                   setLoading(false);
               } catch (error) {
@@ -86,35 +108,36 @@ export default function Dashboard() {
     
           fetchFieldDetails();
       } else {
-          // If no fieldId in URL, use the original method to fetch field data
           fetchFieldData(id!);
       }
     }, [id, location.search]);
       
-      const fetchFieldData = async (userId: string) => {
-        try {
+    const fetchFieldData = async (userId: string) => {
+      try {
           const response = await axios.post(
-            'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
-            { idcuentas: userId },
-            { headers: { 'Content-Type': 'application/json' } }
+              'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
+              { idcuentas: userId },
+              { headers: { 'Content-Type': 'application/json' } }
           );
           const data = JSON.parse(response.data.body);
           if (response.status === 200 && data.length > 0) {
-            const field = data[0];
-            setFieldName(field.nombre || 'No field name available');
-            setUserName(field.nombre_usuario || 'No user name available');
-            setSelectedField(field.idcampo);
-            fetchCurrentCrops(userId, field.idcampo);
-            setLoading(false); // Add this line to set loading to false on success
+              const field = data[0];
+              setFieldName(field.nombre || 'No field name available');
+              setUserName(field.nombre_usuario || 'No user name available');
+              setSelectedField(field.idcampo);
+              fetchCurrentCrops(userId, field.idcampo);
+              fetchUpcomingActions(userId, field.idcampo);
+              setLoading(false);
           } else {
-            setError('No tienes campos aún');
-            setLoading(false);
+              setError('No tienes campos aún');
+              setLoading(false);
           }
-        } catch (error) {
+      } catch (error) {
           setError('Failed to fetch field data');
           setLoading(false);
-        }
-      };    
+      }
+    };
+  
 
       const formatDateLatinAmerican = (dateString: string | null | undefined): string => {
         if (!dateString) return 'No especificada';
@@ -272,8 +295,18 @@ export default function Dashboard() {
                         <h3 className="text-xl font-semibold mb-3">Acciones próximas</h3>
                         {/* Upcoming actions content goes here */}
                         <div className="bg-gray-100 p-3 rounded-lg">
-                            {/* Placeholder content */}
-                            <p>Contenido de acciones próximas</p>
+                        {upcomingActions.length > 0 ? (
+                          upcomingActions.map((action, index) => (
+                            <div key={index} className="bg-gray-100 p-3 rounded-lg mb-4">
+                              <p><strong>Tratamiento:</strong> {action.nombre_tratamiento}</p>
+                              <p><strong>Fecha programada:</strong> {formatDateLatinAmerican(action.fecha_tratamiento)}</p>
+                              <p><strong>Cultivo:</strong> {action.cultivo}</p>
+                              <p><strong>Número de Lote:</strong> {action.numero_lote}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p>No hay acciones próximas programadas.</p>
+                        )}
                         </div>
                     </div>
                     
