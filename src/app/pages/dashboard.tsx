@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
 import axios from 'axios';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Dashboard() {
     const { id } = useParams();
@@ -20,10 +21,45 @@ export default function Dashboard() {
         fecha_siembra: string;
         fecha_estado: string;
     }
+    interface ChartDataPoint {
+      year: string | number;
+      quantity: number;
+      unit: string;
+    }
     const [currentCrops, setCurrentCrops] = useState<any[]>([]);
     const [selectedField, setSelectedField] = useState<string | null>(null);
     
     const [upcomingActions, setUpcomingActions] = useState<any[]>([]);
+
+    const [productionData, setProductionData] = useState<any[]>([]);
+    const [availableCrops, setAvailableCrops] = useState<string[]>([]);
+    const [selectedCrop, setSelectedCrop] = useState<string>('');
+
+    const prepareComparativeChartData = () => {
+      if (!productionData.length) return [];
+      
+      const yearGroups: Record<string, Record<string, number>> = {};
+      
+      productionData.forEach((item: any) => {
+        if (!item.fecha_cosecha) return;
+        
+        const year = new Date(item.fecha_cosecha).getFullYear().toString();
+        const crop = item.cultivo;
+        const quantity = parseFloat(item.cantidad_cosecha) || 0;
+        
+        if (!yearGroups[year]) {
+          yearGroups[year] = {};
+          availableCrops.forEach(c => yearGroups[year][c] = 0);
+        }
+        
+        yearGroups[year][crop] += quantity;
+      });
+      
+      return Object.entries(yearGroups).map(([year, crops]) => ({
+        year,
+        ...crops
+      })).sort((a, b) => parseInt(a.year) - parseInt(b.year));
+    };
 
     const fetchCurrentCrops = async (userId: string, fieldId: string) => {
         try {
@@ -39,7 +75,7 @@ export default function Dashboard() {
           } else {  
             setCurrentCrops([]);
           }
-          setLoading(false); // Make sure to set loading to false here
+          setLoading(false);
         } catch (error) {
           console.error('Failed to fetch crops:', error);
           setLoading(false); // And also here in case of an error
@@ -67,6 +103,36 @@ export default function Dashboard() {
         }
       };
 
+      const fetchProductionData = async (userId: string, fieldId: string) => {
+        try {
+          const response = await axios.post(
+            'https://5j7lxm8mn5.execute-api.us-east-1.amazonaws.com/get-data-production/get-data-production',
+            { idcuentas: userId, idcampo: fieldId },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          const data = JSON.parse(response.data.body);
+          if (response.status === 200 && data.length > 0) {
+            setProductionData(data);
+            
+            // Extract unique crop types from the data and add type assertion
+            const crops = [...new Set(data.map((item: any) => item.cultivo))] as string[];
+            setAvailableCrops(crops);
+            
+            // Set first crop as default selected crop with type assertion
+            if (crops.length > 0 && !selectedCrop) {
+              setSelectedCrop(crops[0]);
+            }
+          } else {
+            setProductionData([]);
+            setAvailableCrops([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch production data:', error);
+          setProductionData([]);
+        }
+      };
+
     const handleLogout = () => {
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
@@ -77,77 +143,103 @@ export default function Dashboard() {
     useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const fieldId = queryParams.get('idcampo');
-    
+
       if (fieldId) {
-          const fetchFieldDetails = async () => {
-              try {
-                  const response = await axios.post(
-                      'https://0ddnllnpb5.execute-api.us-east-1.amazonaws.com/get-first-field/get-first-field',
-                      { idcuentas: id, idcampo: fieldId },
-                      { headers: { 'Content-Type': 'application/json' } }
-                  );
-                  
-                  const data = JSON.parse(response.data.body);
-                  if (data.length > 0) {
-                      const field = data[0];
-                      setFieldName(field.nombre || 'No field name available');
-                      setUserName(field.nombre_usuario || 'No user name available');
-                      setSelectedField(fieldId);
-                      
-                      // Add this line to trigger crop data fetch
-                      fetchCurrentCrops(id!, fieldId);
-                      fetchUpcomingActions(id!, fieldId);
-                  }
-                  setLoading(false);
-              } catch (error) {
-                  console.error('Error fetching field details:', error);
-                  setError('Failed to fetch field details');
-                  setLoading(false);
-              }
-          };
-    
-          fetchFieldDetails();
+        const fetchFieldDetails = async () => {
+          try {
+            const response = await axios.post(
+              'https://0ddnllnpb5.execute-api.us-east-1.amazonaws.com/get-first-field/get-first-field',
+              { idcuentas: id, idcampo: fieldId },
+              { headers: { 'Content-Type': 'application/json' } }
+            );
+            
+            const data = JSON.parse(response.data.body);
+            if (data.length > 0) {
+              const field = data[0];
+              setFieldName(field.nombre || 'No field name available');
+              setUserName(field.nombre_usuario || 'No user name available');
+              setSelectedField(fieldId);
+              
+              // Add these function calls
+              fetchCurrentCrops(id!, fieldId);
+              fetchUpcomingActions(id!, fieldId);
+              fetchProductionData(id!, fieldId);
+            }
+            setLoading(false);
+          } catch (error) {
+            console.error('Error fetching field details:', error);
+            setError('Failed to fetch field details');
+            setLoading(false);
+          }
+        };
+
+        fetchFieldDetails();
       } else {
-          fetchFieldData(id!);
+        fetchFieldData(id!);
       }
     }, [id, location.search]);
       
     const fetchFieldData = async (userId: string) => {
       try {
-          const response = await axios.post(
-              'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
-              { idcuentas: userId },
-              { headers: { 'Content-Type': 'application/json' } }
-          );
-          const data = JSON.parse(response.data.body);
-          if (response.status === 200 && data.length > 0) {
-              const field = data[0];
-              setFieldName(field.nombre || 'No field name available');
-              setUserName(field.nombre_usuario || 'No user name available');
-              setSelectedField(field.idcampo);
-              fetchCurrentCrops(userId, field.idcampo);
-              fetchUpcomingActions(userId, field.idcampo);
-              setLoading(false);
-          } else {
-              setError('No tienes campos aún');
-              setLoading(false);
-          }
-      } catch (error) {
-          setError('Failed to fetch field data');
+        const response = await axios.post(
+          'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
+          { idcuentas: userId },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        const data = JSON.parse(response.data.body);
+        if (response.status === 200 && data.length > 0) {
+          const field = data[0];
+          setFieldName(field.nombre || 'No field name available');
+          setUserName(field.nombre_usuario || 'No user name available');
+          setSelectedField(field.idcampo);
+          fetchCurrentCrops(userId, field.idcampo);
+          fetchUpcomingActions(userId, field.idcampo);
+          fetchProductionData(userId, field.idcampo);
           setLoading(false);
+        } else {
+          setError('No tienes campos aún');
+          setLoading(false);
+        }
+      } catch (error) {
+        setError('Failed to fetch field data');
+        setLoading(false);
       }
     };
   
+
+    const prepareChartData = (): ChartDataPoint[] => {
+      if (!productionData.length || !selectedCrop) return [];
+      
+      const filteredData = productionData.filter(item => item.cultivo === selectedCrop);
+      
+      const groupedByYear = filteredData.reduce((acc: Record<string, ChartDataPoint>, curr: any) => {
+        const year = curr.fecha_cosecha ? new Date(curr.fecha_cosecha).getFullYear() : 'Unknown';
+        const quantity = parseFloat(curr.cantidad_cosecha) || 0;
+        
+        if (!acc[year]) {
+          acc[year] = {
+            year,
+            quantity: 0,
+            unit: curr.unidad_cosecha || 'Unknown'
+          };
+        }
+        
+        acc[year].quantity += quantity;
+        return acc;
+      }, {});
+      
+      return Object.values(groupedByYear).sort((a: ChartDataPoint, b: ChartDataPoint) => 
+        typeof a.year === 'number' && typeof b.year === 'number' ? a.year - b.year : 0
+      );
+    };
 
       const formatDateLatinAmerican = (dateString: string | null | undefined): string => {
         if (!dateString) return 'No especificada';
         
         try {
           const date = new Date(dateString);
-          // Check if date is valid
           if (isNaN(date.getTime())) return dateString;
           
-          // Format as DD/MM/YYYY
           return date.toLocaleDateString('es-ES', {
             day: '2-digit',
             month: '2-digit',
@@ -261,15 +353,111 @@ export default function Dashboard() {
                 <h2 className="text-2xl font-bold mb-4">{userName}</h2>
                 
                 {/* Content Grid */}
-                <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
+                <div className="grid grid-cols-2 gap-4">
                     {/* Bottom: Performance Graphs (spans 2 columns) */}
                     <div className="bg-white rounded-lg shadow-md p-4 col-span-2">
                         <h3 className="text-xl font-semibold mb-3">Gráficos de rendimiento</h3>
-                        {/* Performance graphs content goes here */}
-                        <div className="bg-gray-100 p-3 rounded-lg">
-                            {/* Placeholder content */}
-                            <p>Contenido de gráficos de rendimiento</p>
-                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Annual Production Chart */}
+                          <div className="flex flex-col">
+                            <h3 className="text-xl font-semibold mb-3">Producción Anual</h3>                            
+                            {/* Dropdown to select crop */}
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Seleccionar Cultivo:
+                              </label>
+                              <select 
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                value={selectedCrop}
+                                onChange={(e) => setSelectedCrop(e.target.value)}
+                              >
+                                {availableCrops.map((crop) => (
+                                  <option key={crop} value={crop}>
+                                    {crop}
+                                  </option>
+                                ))}
+                                {availableCrops.length === 0 && (
+                                  <option value="">No hay cultivos disponibles</option>
+                                )}
+                              </select>
+                            </div>
+                            
+                            {/* Production Histogram */}
+                            <div className="bg-gray-100 p-3 rounded-lg" style={{ height: '300px' }}>
+                              {productionData.length > 0 && selectedCrop ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <BarChart
+                                    data={prepareChartData()}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                  >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="year" />
+                                    <YAxis label={{ 
+                                      value: `Cantidad (${prepareChartData().length > 0 ? prepareChartData()[0].unit : ''})`, 
+                                      angle: -90, 
+                                      position: 'insideLeft' 
+                                    }} />
+                                    <Tooltip 
+                                      formatter={(value, name) => {
+                                        const chartData = prepareChartData();
+                                        const unit = chartData.length > 0 ? chartData[0].unit : '';
+                                        return [`${value} ${unit}`, 'Producción'];
+                                      }}
+                                      labelFormatter={(label) => `Año: ${label}`}
+                                    />
+                                    <Legend />
+                                    <Bar dataKey="quantity" name={`Producción de ${selectedCrop}`} fill="#8884d8" />
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <p className="text-gray-500">
+                                    {availableCrops.length === 0 
+                                      ? "No hay datos de producción disponibles." 
+                                      : "Seleccione un cultivo para ver su historial de producción."}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Comparative Yield Chart - NEW */}
+                          <div className="bg-white rounded-lg shadow-md p-4">
+                            <h3 className="text-xl font-semibold mb-3">Rendimiento Comparativo Anual</h3>
+                            <div className="bg-gray-100 p-3 rounded-lg" style={{ height: '300px' }}>
+                              {productionData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <BarChart
+                                    data={prepareComparativeChartData()}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                  >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="year" />
+                                    <YAxis label={{ 
+                                      value: 'Cantidad', 
+                                      angle: -90, 
+                                      position: 'insideLeft' 
+                                    }} />
+                                    <Tooltip />
+                                    <Legend />
+                                    {availableCrops.map((crop, index) => (
+                                      <Bar 
+                                        key={crop} 
+                                        dataKey={crop} 
+                                        stackId="a" 
+                                        fill={`hsl(${index * 60}, 70%, 60%)`} 
+                                      />
+                                    ))}
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <p className="text-gray-500">No hay datos de producción disponibles.</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>                        
                     </div>
 
                     {/* Top Left: Current Crops */}

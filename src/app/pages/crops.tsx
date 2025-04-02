@@ -63,25 +63,25 @@ export default function Crops() {
       navigate('/');
     };
 
-    // Form state
     const [formData, setFormData] = useState({
-        cultivo: '',
-        descripcion: '',
-        numero_lote: '',
-        tipo_semilla: '',
-        fecha_siembra: '',
-        fecha_estimada_cosecha: '',
-        cantidad_siembra: '',
-        unidad_siembra: '',
-        notas: '',
-        estado: '',
-        fecha_estado: '',
-        fecha_cosecha: '',
-        cantidad_cosecha: '',
-        unidad_cosecha: '',
-        imagen: '',
-        idcuentas: id || '',  // Automatically use the user id from params
-        idcampo: '',  // Initialize idcampo to an empty string
+      cultivo: '',
+      descripcion: '',
+      numero_lote: '',
+      tipo_semilla: '',
+      fecha_siembra: '',
+      fecha_estimada_cosecha: '',
+      cantidad_siembra: '',
+      unidad_siembra: '',
+      notas: '',
+      estado: '',
+      customEstado: '',  // Add this line
+      fecha_estado: '',
+      fecha_cosecha: '',
+      cantidad_cosecha: '',
+      unidad_cosecha: '',
+      imagen: '',
+      idcuentas: id || '',
+      idcampo: '',
     });
 
     const fetchCropsData = async (userId: string, fieldId: string) => {
@@ -106,7 +106,6 @@ export default function Crops() {
       const fieldId = queryParams.get('idcampo');
     
       if (fieldId) {
-          // Replace placeholder with actual field data fetch
           const fetchFieldDetails = async () => {
               try {
                   const response = await axios.post(
@@ -121,8 +120,7 @@ export default function Crops() {
                       setFieldName(field.nombre || 'No field name available');
                       setUserName(field.nombre_usuario || 'No user name available');
                       setSelectedField(fieldId);
-                      
-                      // Add this line to trigger crops data fetch
+                      setFormData(prevData => ({ ...prevData, idcampo: fieldId }));
                       fetchCropsData(id!, fieldId);
                   }
                   setLoading(false);
@@ -184,56 +182,51 @@ export default function Crops() {
       }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData({
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      setFormData({
           ...formData,
           [name]: value,
-        });
+      });
 
-        // Update the specific field in formData
-        setFormData(prevFormData => ({
-            ...prevFormData,
-            [name]: value,  // Update the specific field
-        }));
-
-        // If 'estado' is not 'Cosecha', reset the "cosecha" related fields
-        if (name === 'estado' && value !== 'Cosecha') {
-            setFormData(prevFormData => ({
-            ...prevFormData,
-            fecha_cosecha: '',
-            cantidad_cosecha: '',
-            unidad_cosecha: '',
-            imagen: '',
-            }));
-        }
+      if (name === 'estado' && value !== 'Cosecha') {
+          setFormData(prevFormData => ({
+          ...prevFormData,
+          [name]: value,
+          fecha_cosecha: '',
+          cantidad_cosecha: '',
+          unidad_cosecha: '',
+          imagen: '',
+          }));
+      }
     };
 
     const handleAgregarCultivoClick = () => {
-        setShowForm(true); // Show the form when the button is clicked
+        setShowForm(true);
     };
 
     const handleCancelarClick = () => {
-        setFormData({
-            cultivo: '',
-            descripcion: '',
-            numero_lote: '',
-            tipo_semilla: '',
-            fecha_siembra: '',
-            fecha_estimada_cosecha: '',
-            cantidad_siembra: '',
-            unidad_siembra: '',
-            notas: '',
-            estado: '',
-            fecha_estado: '',
-            fecha_cosecha: '',
-            cantidad_cosecha: '',
-            unidad_cosecha: '',
-            imagen: '',
-            idcuentas: id || '',  // Automatically use the user id from params
-            idcampo: '',  // Initialize idcampo to an empty string
-        });
-        setShowForm(false); // Close the form when "Cancelar" is clicked
+      setFormData({
+          cultivo: '',
+          descripcion: '',
+          numero_lote: '',
+          tipo_semilla: '',
+          fecha_siembra: '',
+          fecha_estimada_cosecha: '',
+          cantidad_siembra: '',
+          unidad_siembra: '',
+          notas: '',
+          estado: '',
+          customEstado: '',
+          fecha_estado: '',
+          fecha_cosecha: '',
+          cantidad_cosecha: '',
+          unidad_cosecha: '',
+          imagen: '',
+          idcuentas: id || '',
+          idcampo: selectedField || formData.idcampo || '', 
+      });
+        setShowForm(false); 
     };
     
     const formatDateLatinAmerican = (dateString: string | null | undefined): string => {
@@ -257,10 +250,16 @@ export default function Crops() {
     };
     
     const handleSubmit = async () => {
+      if (!formData.idcampo && selectedField) {
+        setFormData(prev => ({...prev, idcampo: selectedField}));
+      }
       try {
+        let submitData = { ...formData };
+        if (submitData.estado === 'custom' && submitData.customEstado) {
+          submitData.estado = submitData.customEstado;
+        }
         let imageUrl = "";
-    
-        // Only upload the image if it exists
+        
         if (formData.imagen) {
           const imageUploadResponse = await axios.post(
             'https://wuk3ueg3wk.execute-api.us-east-1.amazonaws.com/upload-image/upload-image',
@@ -283,7 +282,7 @@ export default function Crops() {
         console.log('Sending crop data to Lambda 2:', imageUrl); 
         
         const cropData = {
-          ...formData,
+          ...submitData, 
           imageUrl: imageUrl, 
         };
     
@@ -297,7 +296,6 @@ export default function Crops() {
           alert('Cultivo added successfully');
           setShowForm(false);
     
-          // Reset the form data
           setFormData({
             cultivo: '',
             descripcion: '',
@@ -309,13 +307,14 @@ export default function Crops() {
             unidad_siembra: '',
             notas: '',
             estado: '',
+            customEstado: '',
             fecha_estado: '',
             fecha_cosecha: '',
             cantidad_cosecha: '',
             unidad_cosecha: '',
             imagen: '',
             idcuentas: id || '',
-            idcampo: formData.idcampo || '',
+            idcampo: selectedField || formData.idcampo || '',
           });
     
           if (id && formData.idcampo) {
@@ -453,132 +452,226 @@ export default function Crops() {
     
             {/* Form for Agregar Cultivo */}
             {showForm && (
-              <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-                <div className="bg-white p-6 rounded-lg w-96">
+              <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto p-4">
+                <div className="bg-white p-6 rounded-lg w-full max-w-xl max-h-[90vh] overflow-y-auto">
                   <h2 className="text-2xl font-bold mb-4">Registro de nuevo cultivo</h2>
     
-                  <div>
-                    {/* Add form fields */}
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Cultivo</label>
                     <input
                       type="text"
                       name="cultivo"
-                      placeholder="Cultivo"
                       value={formData.cultivo}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Descripción</label>
                     <input
                       type="text"
                       name="descripcion"
-                      placeholder="Descripción"
                       value={formData.descripcion}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Número de Lote</label>
                     <input
                       type="text"
                       name="numero_lote"
-                      placeholder="Número de Lote"
                       value={formData.numero_lote}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Tipo de Semilla</label>
                     <input
                       type="text"
                       name="tipo_semilla"
-                      placeholder="Tipo de Semilla"
                       value={formData.tipo_semilla}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Fecha de Siembra</label>
                     <input
                       type="date"
                       name="fecha_siembra"
                       value={formData.fecha_siembra}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Fecha Estimada de Cosecha</label>
                     <input
                       type="date"
                       name="fecha_estimada_cosecha"
                       value={formData.fecha_estimada_cosecha}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
-                    <input
-                      type="number"
-                      name="cantidad_siembra"
-                      placeholder="Cantidad de Siembra"
-                      value={formData.cantidad_siembra}
-                      onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
-                    />
-                    <input
-                      type="text"
-                      name="unidad_siembra"
-                      placeholder="Unidad de Siembra"
-                      value={formData.unidad_siembra}
-                      onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
-                    />
+                  </div>
+
+                  <div className="flex space-x-2 mb-2">
+                    <div className="w-1/2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Cantidad de Siembra</label>
+                      <input
+                        type="number"
+                        name="cantidad_siembra"
+                        value={formData.cantidad_siembra}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                    <div className="w-1/2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Unidad de Siembra</label>
+                      <select
+                        name="unidad_siembra"
+                        value={formData.unidad_siembra}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border rounded"
+                      >
+                        <option value="">Seleccionar unidad</option>
+                        <option value="kg">kg</option>
+                        <option value="g">grs</option>
+                        <option value="t">ton</option>
+                        <option value="lb">lbs</option>
+                        <option value="bolsas">bolsas</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Notas</label>
                     <input
                       type="text"
                       name="notas"
-                      placeholder="Notas"
                       value={formData.notas}
                       onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
+                      className="w-full p-2 border rounded"
                     />
-                    <input
-                      type="text"
-                      name="estado"
-                      placeholder="Estado"
-                      value={formData.estado}
-                      onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
-                    />
-                    <input
-                      type="date"
-                      name="fecha_estado"
-                      value={formData.fecha_estado}
-                      onChange={handleInputChange}
-                      className="w-full p-2 mb-2 border"
-                    />
-                    {/* Conditionally render the "Cosecha" related fields */}
-                    {formData.estado === 'Cosecha' && (
-                    <>
-                        <input
+                  </div>
+
+                  <div className="flex space-x-2 mb-2">
+                  <div className="w-1/2">
+                    <label className="block text-gray-700 text-sm font-bold mb-1">Etapa</label>
+                    <div className="relative">
+                      <select
+                        name="estado"
+                        value={formData.estado}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border rounded appearance-none"
+                      >
+                        <option value="">Seleccionar etapa</option>
+                        <option value="Germinación">Germinación</option>
+                        <option value="Vegetativa">Vegetativa</option>
+                        <option value="Floración">Floración</option>
+                        <option value="Cosecha">Cosecha</option>
+                        <option value="custom">Otra etapa...</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {formData.estado === 'custom' && (
+                    <div className="w-full mt-2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Etapa personalizada</label>
+                      <input
+                        type="text"
+                        name="customEstado"
+                        placeholder="Ingrese etapa personalizada"
+                        value={formData.customEstado || ''}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            customEstado: e.target.value,
+                          });
+                        }}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                  )}
+                    <div className="w-1/2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Fecha de Registro</label>
+                      <input
+                        type="date"
+                        name="fecha_estado"
+                        value={formData.fecha_estado}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Conditionally render the "Cosecha" related fields */}
+                  {formData.estado === 'Cosecha' && (
+                  <>
+                    <div className="mb-2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Fecha de Cosecha</label>
+                      <input
                         type="date"
                         name="fecha_cosecha"
                         value={formData.fecha_cosecha}
                         onChange={handleInputChange}
-                        className="w-full p-2 mb-2 border"
-                        />
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-2 mb-2">
+                      <div className="w-1/2">
+                        <label className="block text-gray-700 text-sm font-bold mb-1">Cantidad de Cosecha</label>
                         <input
-                        type="number"
-                        name="cantidad_cosecha"
-                        placeholder="Cantidad de Cosecha"
-                        value={formData.cantidad_cosecha}
-                        onChange={handleInputChange}
-                        className="w-full p-2 mb-2 border"
+                          type="number"
+                          name="cantidad_cosecha"
+                          value={formData.cantidad_cosecha}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border rounded"
                         />
-                        <input
-                        type="text"
-                        name="unidad_cosecha"
-                        placeholder="Unidad de Cosecha"
-                        value={formData.unidad_cosecha}
-                        onChange={handleInputChange}
-                        className="w-full p-2 mb-2 border"
-                        />
-                        <input
-                          type="file"
-                          name="imagen"
-                          onChange={handleImageUpload}
-                          className="w-full p-2 mb-2 border"
-                        />
-                    </>
-                    )}
-                  </div>
+                      </div>
+                      <div className="w-1/2">
+                        <label className="block text-gray-700 text-sm font-bold mb-1">Unidad de Cosecha</label>
+                        <select
+                          name="unidad_cosecha"
+                          value={formData.unidad_cosecha}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border rounded"
+                        >
+                          <option value="">Seleccionar unidad</option>
+                          <option value="kg">kg</option>
+                          <option value="g">grs</option>
+                          <option value="t">ton</option>
+                          <option value="lb">lb</option>
+                          <option value="bolsas">bolsas</option>
+                        </select>
+                      </div>
+
+                    </div>
+                    
+                    <div className="mb-2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Imagen</label>
+                      <input
+                        type="file"
+                        name="imagen"
+                        onChange={handleImageUpload}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                  </>
+                  )}
     
                   <div className="flex justify-between">
                     <button
@@ -604,7 +697,7 @@ export default function Crops() {
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-6 py-3 text-left">Nombre</th>
-                    <th className="px-6 py-3 text-left">Estado</th>
+                    <th className="px-6 py-3 text-left">Etapa</th>
                     <th className="px-6 py-3 text-left">Fecha de siembra</th>
                     <th className="px-6 py-3 text-left">Fecha de cosecha</th>
                     <th className="px-6 py-3 text-left">Cantidad cosechada</th>
