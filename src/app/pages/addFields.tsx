@@ -5,11 +5,12 @@ import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
+import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E';
+const libraries: ["places"] = ["places"];
 
 export default function Campo() {
   const { id } = useParams();
@@ -20,11 +21,44 @@ export default function Campo() {
   const [latitud, setLatitud] = useState(0);
   const [longitud, setLongitud] = useState(0);
   const [mapCenter, setMapCenter] = useState({ lat: 45.123456, lng: -67.123456 });
+  const [address, setAddress] = useState('');
+  const autocompleteRef = React.useRef<google.maps.places.SearchBox | null>(null);
+  const [searchBoxRef, setSearchBoxRef] = useState<google.maps.places.SearchBox | null>(null);
   
-  // New state for handling duplicate field error
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
+  const handleMapApiLoaded = () => {
+    setIsMapLoaded(true);
+  };
+
+  const handleGeocoding = () => {
+    if (!address) return;
+    
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: address }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        const location = results[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        setLatitud(lat);
+        setLongitud(lng);
+        setMapCenter({ lat, lng });
+      } else {
+        alert('No se pudo encontrar la ubicación: ' + status);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (isMapLoaded) {
+      console.log("Google Maps API loaded successfully");
+    }
+  }, [isMapLoaded]);
+
+  
   useEffect(() => {
     const storedUsername = localStorage.getItem('username');
     if (storedUsername) {
@@ -168,16 +202,55 @@ export default function Campo() {
           />
         </div>
 
-        <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY} libraries={['places']}>
-          <GoogleMap
-            mapContainerStyle={{ height: '400px', width: '100%' }}
-            center={mapCenter}
-            zoom={15}
-            onClick={handleMapClick} 
-          >
-            <Marker position={mapCenter} />
-          </GoogleMap>
+        <LoadScript 
+          googleMapsApiKey={GOOGLE_MAPS_API_KEY} 
+          libraries={libraries}
+          onLoad={handleMapApiLoaded}
+        >
+          {isMapLoaded && (
+            <>
+              <div>
+                <label htmlFor="address">Dirección o ubicación:</label>
+                <StandaloneSearchBox
+                  onLoad={(ref) => {
+                    autocompleteRef.current = ref;
+                  }}
+                  onPlacesChanged={() => {
+                    const places = autocompleteRef.current?.getPlaces();
+                    if (places && places.length > 0) {
+                      const place = places[0];
+                      if (place.geometry && place.geometry.location) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+                        setLatitud(lat);
+                        setLongitud(lng);
+                        setMapCenter({ lat, lng });
+                      }
+                    }
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Ingrese una dirección o ubicación"
+                    className="border p-2 w-full"
+                  />
+                </StandaloneSearchBox>
+              </div>
+
+              <div className="relative left-1/2 right-1/2 -ml-[60%] -mr-[60%] w-[120%]">
+                <GoogleMap
+                  mapContainerStyle={{ height: '400px', width: '100%' }}
+                  center={mapCenter}
+                  zoom={15}
+                  onClick={handleMapClick}
+                >
+                  <Marker position={mapCenter} />
+                </GoogleMap>
+              </div>
+            </>
+          )}
         </LoadScript>
+
 
         <button 
           type="submit" 

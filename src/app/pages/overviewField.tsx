@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaTrash, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -119,7 +119,6 @@ export default function OverviewField() {
     
     // Handler function to log out
     const handleLogout = () => {
-        // Clear the user data from localStorage
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
         
@@ -156,8 +155,6 @@ export default function OverviewField() {
         }
       };
       
-    
-    
 
     const fetchWeatherData = async (latitude: number, longitude: number) => {
         const apiKey = '5a24d7f9898bef180f12f26b3e8cd165';
@@ -175,12 +172,53 @@ export default function OverviewField() {
             setError('Failed to fetch weather data');
         }
     };
-
+    
     const handleFieldChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedFieldId = event.target.value;
         setSelectedField(selectedFieldId);
         window.history.pushState(null, '', `/${id}/overviewField?idcampo=${selectedFieldId}`);
         await fetchFieldData(selectedFieldId);
+    };
+
+    const handleDeleteField = async () => {
+        if (!selectedField) return;
+        
+        if (window.confirm('¿Estás seguro que deseas eliminar este campo? Esta acción no se puede deshacer.')) {
+          try {
+            const response = await axios.post(
+              'https://gu9rxaxf33.execute-api.us-east-1.amazonaws.com/delete-field/delete-field',
+              {
+                idcuentas: id,
+                idcampo: selectedField
+              },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+            
+            if (response.status === 200) {
+              // Remove the deleted field from the fields array
+              const updatedFields = fields.filter(field => field.idcampo !== selectedField);
+              setFields(updatedFields);
+              
+              // If there are other fields, select the first one, otherwise show error
+              if (updatedFields.length > 0) {
+                await fetchFieldData(updatedFields[0].idcampo);
+                window.history.pushState(null, '', `/${id}/overviewField?idcampo=${updatedFields[0].idcampo}`);
+              } else {
+                setError('No tienes campos aún');
+                setLoading(false);
+              }
+              
+              alert('Campo eliminado con éxito');
+            }
+          } catch (error) {
+            console.error('Error deleting field:', error);
+            alert('Error al eliminar el campo');
+          }
+        }
     };
 
     const handleDashboardClick = () => {
@@ -285,7 +323,7 @@ export default function OverviewField() {
                 </div>
             </div>
 
-            {/* Field Selection Dropdown and Add Field Button */}
+            {/* Field Selection Dropdown, Add Field Button, and Delete Field Button */}
             <div className="absolute top-4 right-24 flex items-center space-x-2">
             <select 
                 onChange={handleFieldChange}
@@ -293,25 +331,34 @@ export default function OverviewField() {
                 className="p-2 rounded bg-white text-gray-800 border border-gray-300"
             >
                 {fields.map((field, index) => (
-                    <option key={field.idcampo || index} value={field.idcampo}>{field.nombre}</option>
+                <option key={field.idcampo || index} value={field.idcampo}>{field.nombre}</option>
                 ))}
             </select>
 
             <button
                 onClick={handleAddFieldClick}
                 className="p-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center"
-                title="Add New Field"
+                title="Agregar Campo"
             >
                 <FaMapMarkerAlt />
             </button>
+            
+            <button
+                onClick={handleDeleteField}
+                className="p-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center"
+                title="Eliminar Campo"
+                disabled={fields.length <= 1}
+            >
+                <FaTrash />
+            </button>
             </div>
 
-            {/* Logout Button - Move this slightly to adjust positioning */}
+            {/* Logout Button - Adjust the right position */}
             <button
-            onClick={handleLogout}
-            className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                onClick={handleLogout}
+                className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
             >
-            <FaSignOutAlt className="text-white" size={24} />
+                <FaSignOutAlt className="text-white" size={24} />
             </button>
 
             {/* Main Content */}

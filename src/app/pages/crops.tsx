@@ -1,3 +1,4 @@
+//crops.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -51,12 +52,10 @@ export default function Crops() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return s3Url.data.imageUrl; // Replace with the response from your Lambda API
+      return s3Url.data.imageUrl; 
     };
     
-    // Handler function to log out
     const handleLogout = () => {
-      // Clear the user data from localStorage
       localStorage.removeItem('username');
       localStorage.removeItem('userId');
       
@@ -65,6 +64,7 @@ export default function Crops() {
 
     const [formData, setFormData] = useState({
       cultivo: '',
+      customCultivo: '',
       descripcion: '',
       numero_lote: '',
       tipo_semilla: '',
@@ -74,7 +74,7 @@ export default function Crops() {
       unidad_siembra: '',
       notas: '',
       estado: '',
-      customEstado: '',  // Add this line
+      customEstado: '',
       fecha_estado: '',
       fecha_cosecha: '',
       cantidad_cosecha: '',
@@ -100,7 +100,34 @@ export default function Crops() {
           setCrops([]);
         }
     };
-
+    
+    const handleDeleteCrop = async (cropId: string | number) => {
+      if (window.confirm('¿Estás seguro de que deseas eliminar este cultivo?')) {
+        try {
+          const response = await axios.post(
+            'https://c7ms0vkkal.execute-api.us-east-1.amazonaws.com/delete-crop/delete-crop',
+            { 
+              idcuentas: id, 
+              idcampo: selectedField || formData.idcampo, 
+              idcrops: cropId 
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+    
+          if (response.status === 200) {
+            alert('Cultivo eliminado exitosamente');
+            // Refresh crops data
+            fetchCropsData(id!, selectedField || formData.idcampo);
+          } else {
+            alert('Error al eliminar el cultivo');
+          }
+        } catch (error) {
+          console.error('Error deleting crop:', error);
+          alert('Error al eliminar el cultivo');
+        }
+      }
+    };
+    
     useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const fieldId = queryParams.get('idcampo');
@@ -208,6 +235,7 @@ export default function Crops() {
     const handleCancelarClick = () => {
       setFormData({
           cultivo: '',
+          customCultivo: '',
           descripcion: '',
           numero_lote: '',
           tipo_semilla: '',
@@ -258,6 +286,11 @@ export default function Crops() {
         if (submitData.estado === 'custom' && submitData.customEstado) {
           submitData.estado = submitData.customEstado;
         }
+
+        if (submitData.cultivo === 'custom' && submitData.customCultivo) {
+          submitData.cultivo = submitData.customCultivo;
+        }
+
         let imageUrl = "";
         
         if (formData.imagen) {
@@ -298,6 +331,7 @@ export default function Crops() {
     
           setFormData({
             cultivo: '',
+            customCultivo: '',
             descripcion: '',
             numero_lote: '',
             tipo_semilla: '',
@@ -441,14 +475,16 @@ export default function Crops() {
             <h1 className="text-4xl font-bold mb-4">{fieldName}</h1>
     
             {/* Add Cultivo Button */}
-            <div className="mb-4">
+            <div className="mb-4 flex justify-between">
               <button 
                 onClick={handleAgregarCultivoClick}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
                 Agregar cultivo
               </button>
+              
             </div>
+
     
             {/* Form for Agregar Cultivo */}
             {showForm && (
@@ -458,14 +494,61 @@ export default function Crops() {
     
                   <div className="mb-2">
                     <label className="block text-gray-700 text-sm font-bold mb-1">Cultivo</label>
-                    <input
-                      type="text"
+                    <select
                       name="cultivo"
                       value={formData.cultivo}
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded"
-                    />
+                    >
+                      <option value="">Seleccionar cultivo</option>
+                      <option value="Maíz">Maíz</option>
+                      <option value="Trigo">Trigo</option>
+                      <option value="Arroz">Arroz</option>
+                      <option value="Soja">Soja</option>
+                      <option value="Papa">Papa</option>
+                      <option value="Tomate">Tomate</option>
+                      <option value="Frijol">Frijol</option>
+                      <option value="Cebada">Cebada</option>
+                      <option value="Avena">Avena</option>
+                      <option value="Girasol">Girasol</option>
+                      <option value="Caña de Azúcar">Caña de Azúcar</option>
+                      <option value="Café">Café</option>
+                      <option value="Algodón">Algodón</option>
+                      <option value="Cacao">Cacao</option>
+                      <option value="Cebolla">Cebolla</option>
+                      <option value="Zanahoria">Zanahoria</option>
+                      <option value="Lechuga">Lechuga</option>
+                      <option value="Pepino">Pepino</option>
+                      <option value="Calabaza">Calabaza</option>
+                      <option value="Pimiento">Pimiento</option>
+                      <option value="Ajo">Ajo</option>
+                      <option value="Aguacate">Aguacate</option>
+                      <option value="Plátano">Plátano</option>
+                      <option value="Naranja">Naranja</option>
+                      <option value="Limón">Limón</option>
+                      <option value="Uva">Uva</option>
+                      <option value="custom">Otro cultivo...</option>
+                    </select>
                   </div>
+
+                  {formData.cultivo === 'custom' && (
+                    <div className="mb-2">
+                      <label className="block text-gray-700 text-sm font-bold mb-1">Cultivo personalizado</label>
+                      <input
+                        type="text"
+                        name="customCultivo"
+                        placeholder="Ingrese nombre del cultivo"
+                        value={formData.customCultivo || ''}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            customCultivo: e.target.value,
+                          });
+                        }}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                  )}
 
                   <div className="mb-2">
                     <label className="block text-gray-700 text-sm font-bold mb-1">Descripción</label>
@@ -690,30 +773,62 @@ export default function Crops() {
                 </div>
               </div>
             )}
-    
+
+            {/* Link to go to "Ir a Detalles" aligned to the right */}
+            <div className="mb-4 flex justify-end">
+              <span 
+                onClick={() => navigate(`/${id}/tracking?idcampo=${selectedField}`)}
+                className="text-blue-500 cursor-pointer hover:underline"
+              >
+                Ir a Detalles
+              </span>
+            </div>
+
             {/* Table for crops */}
             <div className="overflow-x-auto">
               <table className="min-w-full table-auto border-collapse border border-gray-800">
                 <thead className="bg-gray-800 text-white">
                   <tr>
-                    <th className="px-6 py-3 text-left">Nombre</th>
+                  <th className="px-6 py-3 text-left">Cultivo y Lote</th>
                     <th className="px-6 py-3 text-left">Etapa</th>
                     <th className="px-6 py-3 text-left">Fecha de siembra</th>
                     <th className="px-6 py-3 text-left">Fecha de cosecha</th>
                     <th className="px-6 py-3 text-left">Cantidad cosechada</th>
-                    <th className="px-6 py-3 text-left">Detalles</th>
+                    <th className="px-6 py-3 text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.isArray(crops) && crops.length > 0 ? (
                     crops.map((crop) => (
                       <tr key={crop.idcrops}>
-                        <td className="px-6 py-4 border-t border-gray-200">{crop.cultivo}</td>
+                        <td className="px-6 py-4 border-t border-gray-200">
+                          {crop.cultivo} - Lote {crop.numero_lote}
+                        </td>
                         <td className="px-6 py-4 border-t border-gray-200">{crop.estado}</td>
                         <td className="px-6 py-4 border-t border-gray-200">{formatDateLatinAmerican(crop.fecha_siembra)}</td>
                         <td className="px-6 py-4 border-t border-gray-200">{formatDateLatinAmerican(crop.fecha_cosecha)}</td>
-                        <td className="px-6 py-4 border-t border-gray-200">{crop.cantidad_cosecha}</td>
-                        <td className="px-6 py-4 border-t border-gray-200">Detalles</td>
+                        <td className="px-6 py-4 border-t border-gray-200">
+                          {crop.cantidad_cosecha ? `${crop.cantidad_cosecha} ${crop.unidad_cosecha || ''}` : ''}
+                        </td>
+                        <td className="px-6 py-4 border-t border-gray-200 flex space-x-2">
+                          <button className="p-1 rounded bg-blue-500 text-white hover:bg-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCrop(crop.idcrops)}
+                            className="p-1 rounded bg-red-500 text-white hover:bg-red-600"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
