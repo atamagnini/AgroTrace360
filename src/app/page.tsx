@@ -22,9 +22,10 @@ export default function Page() {
     setIsClient(true);
   }, []);
 
-  /* if (!isClient) {
+  if (!isClient) {
+    // If on server, render nothing
     return null;
-  } */
+  }
 
   return (
     <BrowserRouter>

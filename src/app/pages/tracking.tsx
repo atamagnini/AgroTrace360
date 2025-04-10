@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+//tracking.tsx
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaTrash, FaMapMarkerAlt, FaSeedling, FaUser, FaTrashAlt } from 'react-icons/fa';

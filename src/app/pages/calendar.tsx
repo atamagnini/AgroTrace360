@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaUser, FaTrashAlt, FaMapMarkerAlt, FaSeedling, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -172,19 +173,22 @@ export default function Calendar() {
     }, [id, selectedField]);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            const dropdown = document.querySelector('.user-dropdown-container');
-            if (dropdown && !dropdown.contains(target)) {
-                setShowUserMenu(false);
-            }
-        };
+        if (typeof document !== 'undefined') {
+            const handleClickOutside = (event: MouseEvent) => {
+                const target = event.target as HTMLElement;
+                const dropdown = document.querySelector('.user-dropdown-container');
+                if (dropdown && !dropdown.contains(target)) {
+                    setShowUserMenu(false);
+                }
+            };
     
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
     }, [showUserMenu]);
+    
     
     const handleDashboardClick = () => {
         navigate(`/${id}/dashboard?idcampo=${selectedField}`);

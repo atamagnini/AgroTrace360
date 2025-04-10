@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -142,20 +143,27 @@ export default function OverviewField() {
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-          const target = event.target as HTMLElement;
-          
-          const dropdown = document.querySelector('.user-dropdown-container');
-          
-          if (dropdown && !dropdown.contains(target)) {
-            setShowUserMenu(false);
-          }
+            const target = event.target as HTMLElement;
+            
+            const dropdown = document.querySelector('.user-dropdown-container');
+            
+            if (dropdown && !dropdown.contains(target)) {
+                setShowUserMenu(false);
+            }
         };
-      
-        document.addEventListener('mousedown', handleClickOutside);
+    
+        // Ensure this only runs on the client-side by checking if `document` is available
+        if (typeof document !== 'undefined') {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+    
         return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
+            if (typeof document !== 'undefined') {
+                document.removeEventListener('mousedown', handleClickOutside);
+            }
         };
     }, [showUserMenu]);
+    
     
     const handleLogout = () => {
         localStorage.removeItem('username');

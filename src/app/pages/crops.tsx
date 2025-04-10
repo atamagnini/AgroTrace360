@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -221,19 +222,22 @@ export default function Crops() {
     }, [id, formData.idcampo]);
 
     useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-          const target = event.target as HTMLElement;
-          const dropdown = document.querySelector('.user-dropdown-container');
-          if (dropdown && !dropdown.contains(target)) {
-              setShowUserMenu(false);
-          }
-      };
+      if (typeof document !== 'undefined') {
+          const handleClickOutside = (event: MouseEvent) => {
+              const target = event.target as HTMLElement;
+              const dropdown = document.querySelector('.user-dropdown-container');
+              if (dropdown && !dropdown.contains(target)) {
+                  setShowUserMenu(false);
+              }
+          };
   
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, [showUserMenu]);
+          document.addEventListener('mousedown', handleClickOutside);
+          return () => {
+              document.removeEventListener('mousedown', handleClickOutside);
+          };
+      }
+  }, [showUserMenu]);
+  
   
     /* const fetchFieldData = async (userId: string) => {
       try {

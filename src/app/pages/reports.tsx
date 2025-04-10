@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaUser, FaTrashAlt, FaMapMarkerAlt, FaSeedling, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
@@ -311,11 +312,18 @@ export default function Reports() {
             }
         };
     
-        document.addEventListener('mousedown', handleClickOutside);
+        // Ensure this only runs on the client side
+        if (typeof document !== 'undefined') {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+    
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
+            if (typeof document !== 'undefined') {
+                document.removeEventListener('mousedown', handleClickOutside);
+            }
         };
     }, [showUserMenu]);
+    
 
     
     const handleFieldChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

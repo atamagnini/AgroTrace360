@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+//addFields.tsx
+'use client';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -7,7 +9,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
+import dynamic from 'next/dynamic';
+const DynamicGoogleMap = dynamic(
+  () => import('@react-google-maps/api').then((mod) => mod.GoogleMap),
+  { ssr: false }
+);
 import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from '@react-google-maps/api';
+
+
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E';
 const libraries: ["places"] = ["places"];
@@ -238,14 +247,16 @@ export default function Campo() {
               </div>
 
               <div className="relative left-1/2 right-1/2 -ml-[60%] -mr-[60%] w-[120%]">
-                <GoogleMap
-                  mapContainerStyle={{ height: '400px', width: '100%' }}
-                  center={mapCenter}
-                  zoom={15}
-                  onClick={handleMapClick}
-                >
-                  <Marker position={mapCenter} />
-                </GoogleMap>
+              <DynamicGoogleMap
+                mapContainerStyle={{ height: '400px', width: '100%' }}
+                center={mapCenter}
+                zoom={15}
+                onClick={handleMapClick}
+              >
+                <Marker position={mapCenter} />
+              </DynamicGoogleMap>
+
+
               </div>
             </>
           )}

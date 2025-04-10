@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+//welcome.tsx
+'use client';
 import React, {useState} from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +13,10 @@ export default function Landing() {
   const [showModal, setShowModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
+  const [nombreUsuario, setNombreUsuario] = useState('');
 
   const openModal = () => {
     setShowModal(true);
@@ -35,10 +41,10 @@ export default function Landing() {
       return;
     }
   
-    const nombre = (document.getElementById('nombre') as HTMLInputElement).value;
+/*     const nombre = (document.getElementById('nombre') as HTMLInputElement).value;
     const apellido = (document.getElementById('apellido') as HTMLInputElement).value;
     const email = (document.getElementById('email') as HTMLInputElement).value;
-    const nombreUsuario = (document.getElementById('nombre_usuario') as HTMLInputElement).value;
+    const nombreUsuario = (document.getElementById('nombre_usuario') as HTMLInputElement).value; */
   
     // Check if user exists before registering
     try {
@@ -223,6 +229,8 @@ export default function Landing() {
                   type="text"
                   id="nombre"
                   className="w-full p-2 border rounded"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
                   required
                 />
               </div>
@@ -232,6 +240,8 @@ export default function Landing() {
                   type="text"
                   id="apellido"
                   className="w-full p-2 border rounded"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
                   required
                 />
               </div>
@@ -241,6 +251,8 @@ export default function Landing() {
                   type="email"
                   id="email"
                   className="w-full p-2 border rounded"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -250,6 +262,8 @@ export default function Landing() {
                   type="text"
                   id="nombre_usuario"
                   className="w-full p-2 border rounded"
+                  value={nombreUsuario}
+                  onChange={(e) => setNombreUsuario(e.target.value)}
                   required
                 />
               </div>
