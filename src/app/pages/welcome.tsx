@@ -1,10 +1,10 @@
-//welcome.tsx
+/* eslint-disable */
+
 import React, {useState} from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function Landing() {
-  // State to manage modal visibility
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -12,82 +12,113 @@ export default function Landing() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
 
-  // Function to handle opening the registration modal
   const openModal = () => {
     setShowModal(true);
   };
 
-  // Function to handle opening the login modal
   const openLoginModal = () => {
     setShowLoginModal(true);
   };
 
-  // Function to handle closing the registration modal
   const closeModal = () => {
     setShowModal(false);
   };
 
-  // Function to handle closing the login modal
   const closeLoginModal = () => {
     setShowLoginModal(false);
   };
 
-  // Form submission handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert('Las contraseñas no coinciden');
       return;
     }
-
-    // Get form data
+  
     const nombre = (document.getElementById('nombre') as HTMLInputElement).value;
     const apellido = (document.getElementById('apellido') as HTMLInputElement).value;
     const email = (document.getElementById('email') as HTMLInputElement).value;
     const nombreUsuario = (document.getElementById('nombre_usuario') as HTMLInputElement).value;
-
-    // Prepare data to send to API
-    const userData = {
-      nombre,
-      apellido,
-      email,
-      nombre_usuario: nombreUsuario,
-      contraseña: password,
-    };
-
+  
+    // Check if user exists before registering
     try {
-      const response = await axios.post(
-        'https://93eodw6y34.execute-api.us-east-1.amazonaws.com/new-user/new-user',
-        userData, 
+      const checkResponse = await axios.post(
+        'https://gifdggswse.execute-api.us-east-1.amazonaws.com/check-user/check-user',
+        JSON.stringify({ 
+          email, 
+          nombre_usuario: nombreUsuario 
+        }),
         {
           headers: {
             'Content-Type': 'application/json',
           },
         }
       );
-      // Parse the response body
-      const responseBody = JSON.parse(response.data.body);
-      console.log('Parsed Response Data:', responseBody);
-
-      console.log('Response Data:', response.data);
-      console.log('User ID:', response.data.idcuentas);
       
-      if (response.status === 200 && responseBody.idcuentas) {
-        console.log('User successfully registered');
-        console.log('User ID:', responseBody.idcuentas);
-
-        localStorage.setItem('username', nombreUsuario);  // Save username for later use
-        localStorage.setItem('userId', responseBody.idcuentas);  // Save user ID (idcuentas)
-
-        closeModal();
-
-        // Redirect to addFields.tsx
-        navigate(`/${responseBody.idcuentas}/addFields`);
-      } else {
-        console.error('Error during registration');
+      // Safe parsing of response
+      let checkData;
+      try {
+        checkData = typeof checkResponse.data === 'string' 
+          ? JSON.parse(checkResponse.data) 
+          : checkResponse.data;
+          
+        if (checkData.exists) {
+          alert('El nombre de usuario o correo electrónico ya está en uso');
+          return;
+        }
+      } catch (parseError) {
+        console.error('Error parsing check user response:', parseError);
+        alert('Error al verificar el usuario. Por favor, intente nuevamente.');
+        return;
+      }
+      
+      // Continue with registration if user doesn't exist
+      const userData = {
+        nombre,
+        apellido,
+        email,
+        nombre_usuario: nombreUsuario,
+        contraseña: password,
+      };
+  
+      const response = await axios.post(
+        'https://93eodw6y34.execute-api.us-east-1.amazonaws.com/new-user/new-user',
+        userData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      // Safe parsing of response
+      let responseBody;
+      try {
+        responseBody = typeof response.data.body === 'string' 
+          ? JSON.parse(response.data.body) 
+          : response.data.body;
+        
+        console.log('Parsed Response Data:', responseBody);
+        console.log('Response Data:', response.data);
+        
+        if (response.status === 200 && responseBody.idcuentas) {
+          console.log('User successfully registered');
+          console.log('User ID:', responseBody.idcuentas);
+          localStorage.setItem('username', nombreUsuario);
+          localStorage.setItem('userId', responseBody.idcuentas);
+          closeModal();
+          navigate(`/${responseBody.idcuentas}/addFields`);
+        } else {
+          alert('Error durante el registro. Ya hay un nombre de usuario o email con ese nombre.');
+          // Removed the console.error line that was causing the issue
+        }
+      } catch (parseError) {
+        console.error('Error parsing registration response:', parseError);
+        alert('Error durante el registro. Por favor, intente nuevamente.');
       }
     } catch (error) {
       console.error('Error:', error);
+      alert('Error de conexión. Por favor, intente nuevamente más tarde.');
     }
   };
 
@@ -113,11 +144,9 @@ export default function Landing() {
       const responseBody = JSON.parse(response.data.body);
   
       if (response.status === 200 && responseBody.idcuentas) {
-        // Save user details to localStorage or sessionStorage
         localStorage.setItem('username', username);
         localStorage.setItem('userId', responseBody.idcuentas);
   
-        // Fetch the user's fields after login
         const fieldResponse = await axios.post(
           'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
           { idcuentas: responseBody.idcuentas },

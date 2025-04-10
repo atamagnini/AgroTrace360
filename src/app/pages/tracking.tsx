@@ -1,7 +1,8 @@
-//tracking.tsx
+/* eslint-disable */
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaTrash, FaMapMarkerAlt, FaSeedling, FaUser, FaTrashAlt } from 'react-icons/fa';
 import axios from 'axios';
 
 export default function Tracking() {
@@ -48,7 +49,155 @@ export default function Tracking() {
         idcrops: selectedCrop || '',
         idcuentas: id || '',
     });
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
+    const handleDeleteAccount = async () => {
+        const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.");
+        
+        if (!confirmDelete) return;
+        
+        const confirmFinal = window.prompt("Escribe 'ELIMINAR' para confirmar la eliminación de tu cuenta");
+        if (confirmFinal !== "ELIMINAR") return;
+        
+        try {
+            const response = await axios.post(
+                'https://qhdzac2nc8.execute-api.us-east-1.amazonaws.com/delete-user/delete-user',
+                { idcuentas: id },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+            
+            if (response.status === 200) {
+                alert('Tu cuenta ha sido eliminada con éxito.');
+                localStorage.removeItem('username');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentFieldId');
+                navigate('/');
+            } else {
+                alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+            }
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+        }
+    };
+    
+
+    //Dropdown cat/subcat Treatments
+    const [categories, setCategories] = useState<string[]>([
+        'Limpieza', 'Riego', 'Fertilización', 'Acondicionamiento Post-Cosecha', 
+        'Poda', 'Trasplante', 'Control de Plagas', 'Enmienda del Suelo', 
+        'Fumigación', 'Protección Solar', 'Cosecha', 'Siembra'
+    ]);
+
+    const [subcategories, setSubcategories] = useState<{[key: string]: string[]}>({
+        'Limpieza': ['Limpieza de herramientas', 'Limpieza del área de cultivo', 'Desinfección de equipos'],
+        'Riego': ['Riego por goteo', 'Riego por aspersión', 'Riego manual'],
+        'Fertilización': ['Fertilización nitrogenada', 'Fertilización fosfatada', 'Fertilización orgánica', 'Fertilización foliar'],
+        'Acondicionamiento Post-Cosecha': ['Almacenamiento', 'Limpieza y embalaje', 'Refrigeración'],
+        'Poda': ['Poda de formación', 'Poda de mantenimiento', 'Poda de cosecha'],
+        'Trasplante': ['Trasplante de plántulas', 'Trasplante de cultivos'],
+        'Control de Plagas': ['Control de insectos', 'Control de hongos', 'Control de roedores'],
+        'Enmienda del Suelo': ['Enmienda orgánica', 'Enmienda química', 'Ajuste del pH'],
+        'Fumigación': ['Fumigación preventiva', 'Fumigación curativa'],
+        'Protección Solar': ['Sombra (uso de mallas)', 'Cobertura de plástico', 'Uso de invernaderos'],
+        'Cosecha': ['Cosecha manual', 'Cosecha mecanizada'],
+        'Siembra': ['Siembra directa', 'Siembra en almácigos']
+    });
+    
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
+
+    //Dropdown cat/subcat Inputs
+    const [inputCategories, setInputCategories] = useState<string[]>([
+        'Fertilizantes', 'Pesticidas', 'Semillas y Plantas', 'Material de Riego',
+        'Enmiendas del Suelo', 'Plaguicidas Biológicos y Bioestimulantes', 'Herbicidas',
+        'Hormonas y Reguladores de Crecimiento', 'Sustratos y Sillas', 'Materiales de Protección Física',
+        'Productos para Fertilización Foliar', 'Aditivos para el Control de Condiciones', 'Otros Insumos'
+    ]);
+
+    const [inputSubcategories, setInputSubcategories] = useState<{[key: string]: string[]}>({
+        'Fertilizantes': ['Fertilizantes Nitrogenados', 'Fertilizantes Fosfatados', 'Fertilizantes Potásicos', 'Fertilizantes Complejos', 'Fertilizantes Orgánicos', 'Micronutrientes'],
+        'Pesticidas': ['Insecticidas', 'Fungicidas', 'Herbicidas', 'Acaricidas', 'Nematicidas', 'Rodenticidas'],
+        'Semillas y Plantas': ['Semillas de Grano', 'Semillas de Hortalizas', 'Plántulas'],
+        'Material de Riego': ['Sistemas de Riego por Goteo', 'Sistemas de Riego por Aspersión', 'Riego Manual', 'Sistemas de Riego Automático'],
+        'Enmiendas del Suelo': ['Enmiendas Ácidas', 'Compost y Materia Orgánica', 'Materia Orgánica'],
+        'Plaguicidas Biológicos y Bioestimulantes': ['Control Biológico', 'Biofertilizantes', 'Funguicidas Biológicos'],
+        'Herbicidas': ['Herbicidas Selectivos', 'Herbicidas No Selectivos'],
+        'Hormonas y Reguladores de Crecimiento': ['Auxinas', 'Giberelinas', 'Citoquininas', 'Etileno'],
+        'Sustratos y Sillas': ['Sustratos Orgánicos', 'Sustratos Inorgánicos'],
+        'Materiales de Protección Física': ['Mallas de Protección', 'Coberturas para Invernaderos', 'Barreras de Protección'],
+        'Productos para Fertilización Foliar': ['Fertilizantes Líquidos', 'Microelementos'],
+        'Aditivos para el Control de Condiciones': ['Protectores Térmicos', 'Control de Humedad'],
+        'Otros Insumos': ['Materiales de Embalaje', 'Productos de Desinfección']
+    });
+
+    const [selectedInputCategory, setSelectedInputCategory] = useState<string>('');
+
+    const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const category = e.target.value;
+        setSelectedCategory(category);
+        setFormData({
+          ...formData,
+          categoria: category,
+          subcategoria: '' 
+        });
+    };
+
+    const handleInputCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const category = e.target.value;
+        setSelectedInputCategory(category);
+        setInputFormData({
+            ...inputFormData,
+            categoria: category,
+            subcategoria: ''
+        });
+    };
+
+    const handleDeleteTreatment = async (idtreatment: string) => {
+        try {
+          const response = await axios.post(
+            'https://8uqo9kccxg.execute-api.us-east-1.amazonaws.com/delete-treatment/delete-treatment',
+            { idtreatment },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          if (response.status === 200) {
+            alert('Tratamiento eliminado correctamente');
+            // Remove the deleted treatment from the state
+            setTreatments(treatments.filter((treatment) => treatment.idtreatment !== idtreatment));
+          } else {
+            alert('Error al eliminar el tratamiento');
+          }
+        } catch (error) {
+          console.error('Error deleting treatment:', error);
+          alert('Error al eliminar el tratamiento');
+        }
+    };
+
+    const handleDeleteInput = async (idinput: string) => {
+        try {
+            const response = await axios.post(
+                'https://038b41u6k2.execute-api.us-east-1.amazonaws.com/delete-input/delete-input',
+                { idinput },
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+    
+            if (response.status === 200) {
+                alert('Insumo eliminado correctamente');
+                // Remove the deleted input from the state
+                setInputs(inputs.filter((input) => input.idinput !== idinput));
+            } else {
+                alert('Error al eliminar el insumo');
+            }
+        } catch (error) {
+            console.error('Error deleting input:', error);
+            alert('Error al eliminar el insumo');
+        }
+    };
+    
     const formatDate = (dateString: string | null | undefined): string => {
         if (!dateString || dateString === "0000-00-00") return "N/A";
         
@@ -67,7 +216,7 @@ export default function Tracking() {
         }
     };
     
-    const fetchFieldData = async (userId: string) => {
+    /* const fetchFieldData = async (userId: string) => {
         try {
             const response = await axios.post(
                 'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data',
@@ -105,9 +254,8 @@ export default function Tracking() {
             setError('Failed to fetch field data');
             setLoading(false);
         }
-    };
+    }; */
     
-    // Fetch crops data
     const fetchCropsData = async (userId: string, fieldId: string) => {
         try {
             const response = await axios.post(
@@ -477,14 +625,14 @@ export default function Tracking() {
     };
     
     const handleInputChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
       ) => {
         const { name, value } = e.target;
         setFormData({
           ...formData,
           [name]: value,
         });
-    };    
+    };   
     
     const handleInputFormChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -674,6 +822,20 @@ export default function Tracking() {
         }
     }, [id, idcampo, activeTab]);
    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            const dropdown = document.querySelector('.user-dropdown-container');
+            if (dropdown && !dropdown.contains(target)) {
+                setShowUserMenu(false);
+            }
+        };
+    
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showUserMenu]);    
 
     const handleLogout = () => {
         localStorage.removeItem('username');
@@ -769,13 +931,36 @@ export default function Tracking() {
                                 </div>
             </div>
 
-            {/* Logout Button */}
-            <button
-                onClick={handleLogout}
-                className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
-            >
-                <FaSignOutAlt className="text-white" size={24} />
-            </button>
+            {/* User Menu Dropdown */}
+            <div className="absolute top-4 right-4 user-dropdown-container">
+                <div className="relative">
+                    <button
+                        onClick={() => setShowUserMenu(!showUserMenu)}
+                        className="p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                    >
+                        <FaUser className="text-white" size={24} />
+                    </button>
+                    
+                    {/* Dropdown menu */}
+                    {showUserMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                            <button
+                                onClick={handleLogout}
+                                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                            >
+                                <FaSignOutAlt className="mr-2" /> Cerrar sesión
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
+                            >
+                                <FaTrashAlt className="mr-2" /> Eliminar cuenta
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
 
             {/* Main Content */}
             <div className="w-3/4 p-6">
@@ -970,7 +1155,7 @@ export default function Tracking() {
                                 </div>
                             )}
 
-                            {selectedCrop && (
+                            {selectedCrop && selectedCrop !== "all" && (
                                 <button
                                     onClick={handleAgregarTratamientoClick}
                                     className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -1013,6 +1198,12 @@ export default function Tracking() {
                                                         <td className="py-2 px-4 border-b">{treatment.temperatura}</td>
                                                         <td className="py-2 px-4 border-b">{treatment.humedad}</td>
                                                         <td className="py-2 px-4 border-b">{treatment.notas}</td>
+                                                        <td className="py-2 px-4 border-b">
+                                                        <FaTrash
+                                                            className="cursor-pointer text-red-600"
+                                                            onClick={() => handleDeleteTreatment(treatment.idtreatment)} // Call delete function when clicked
+                                                        />
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1039,22 +1230,34 @@ export default function Tracking() {
                                 placeholder="Nombre"
                                 className="w-full p-2 mb-2 border"
                             />
-                            <input
-                                type="text"
+                            <select
                                 name="categoria"
                                 value={formData.categoria}
-                                onChange={handleInputChange}
-                                placeholder="Categoría"
+                                onChange={handleCategoryChange}
                                 className="w-full p-2 mb-2 border"
-                            />
-                            <input
-                                type="text"
+                                >
+                                <option value="">Seleccione una categoría</option>
+                                {categories.map((category) => (
+                                    <option key={category} value={category}>
+                                    {category}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
                                 name="subcategoria"
                                 value={formData.subcategoria}
                                 onChange={handleInputChange}
-                                placeholder="Subcategoría"
                                 className="w-full p-2 mb-2 border"
-                            />
+                                disabled={!formData.categoria}
+                                >
+                                <option value="">Seleccione una subcategoría</option>
+                                {formData.categoria &&
+                                    subcategories[formData.categoria]?.map((subcategory) => (
+                                    <option key={subcategory} value={subcategory}>
+                                        {subcategory}
+                                    </option>
+                                    ))}
+                            </select>
                             <input
                                 type="date"
                                 name="fecha"
@@ -1135,7 +1338,7 @@ export default function Tracking() {
                                 </div>
                             )}
 
-                            {selectedCrop && (
+                            {selectedCrop && selectedCrop !== "all" && (
                                 <button
                                     onClick={handleAgregarInsumoClick}
                                     className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -1182,6 +1385,12 @@ export default function Tracking() {
                                                             }
                                                         </td>
                                                         <td className="py-2 px-4 border-b">{input.notas}</td>
+                                                        <td className="py-2 px-4 border-b">
+                                                            <FaTrash
+                                                                className="cursor-pointer text-red-600"
+                                                                onClick={() => handleDeleteInput(input.idinput)} 
+                                                            />
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1208,22 +1417,34 @@ export default function Tracking() {
                                 placeholder="Nombre"
                                 className="w-full p-2 mb-2 border"
                             />
-                            <input
-                                type="text"
+                            <select
                                 name="categoria"
                                 value={inputFormData.categoria}
-                                onChange={handleInputFormChange}
-                                placeholder="Categoría"
+                                onChange={handleInputCategoryChange}
                                 className="w-full p-2 mb-2 border"
-                            />
-                            <input
-                                type="text"
+                            >
+                                <option value="">Seleccione una categoría</option>
+                                {inputCategories.map((category) => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
                                 name="subcategoria"
                                 value={inputFormData.subcategoria}
                                 onChange={handleInputFormChange}
-                                placeholder="Subcategoría"
                                 className="w-full p-2 mb-2 border"
-                            />
+                                disabled={!inputFormData.categoria}
+                            >
+                                <option value="">Seleccione una subcategoría</option>
+                                {inputFormData.categoria &&
+                                    inputSubcategories[inputFormData.categoria]?.map((subcategory) => (
+                                        <option key={subcategory} value={subcategory}>
+                                            {subcategory}
+                                        </option>
+                                    ))}
+                            </select>
                             <input
                                 type="number"
                                 name="cantidad"

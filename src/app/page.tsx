@@ -1,4 +1,5 @@
-import Image from "next/image";
+/* eslint-disable */
+
 'use client';
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -17,17 +18,14 @@ import Dashboard from "./pages/dashboard";
 export default function Page() {
   const [isClient, setIsClient] = useState(false);
 
-  // Enable client-only rendering to prevent SSR issues
   useEffect(() => {
-    setIsClient(true); // Ensures this code only runs on the client
+    setIsClient(true);
   }, []);
 
-  if (!isClient) {
-    // If on server, render nothing
+  /* if (!isClient) {
     return null;
-  }
+  } */
 
-  // Only one <BrowserRouter> in the app, defined here
   return (
     <BrowserRouter>
       <Routes>

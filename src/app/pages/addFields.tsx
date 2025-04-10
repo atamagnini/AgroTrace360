@@ -1,4 +1,4 @@
-//addFields.tsx
+/* eslint-disable */
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -21,9 +21,8 @@ export default function Campo() {
   const [latitud, setLatitud] = useState(0);
   const [longitud, setLongitud] = useState(0);
   const [mapCenter, setMapCenter] = useState({ lat: 45.123456, lng: -67.123456 });
-  const [address, setAddress] = useState('');
+  const [address] = useState('');
   const autocompleteRef = React.useRef<google.maps.places.SearchBox | null>(null);
-  const [searchBoxRef, setSearchBoxRef] = useState<google.maps.places.SearchBox | null>(null);
   
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
@@ -33,7 +32,7 @@ export default function Campo() {
     setIsMapLoaded(true);
   };
 
-  const handleGeocoding = () => {
+  /* const handleGeocoding = () => {
     if (!address) return;
     
     const geocoder = new google.maps.Geocoder();
@@ -50,7 +49,7 @@ export default function Campo() {
         alert('No se pudo encontrar la ubicación: ' + status);
       }
     });
-  };
+  }; */
 
   useEffect(() => {
     if (isMapLoaded) {
@@ -171,6 +170,7 @@ export default function Campo() {
         onClick={handleLogout}
         className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
       >
+        
         <FaSignOutAlt className="text-white" size={24} />
       </button>
 

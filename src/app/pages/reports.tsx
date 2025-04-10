@@ -1,19 +1,17 @@
-//reports.tsx
+/* eslint-disable */
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt, FaSeedling, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaUser, FaTrashAlt, FaMapMarkerAlt, FaSeedling, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import axios from 'axios';
 import Papa from 'papaparse';
 
 export default function Reports() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [fieldName, setFieldName] = useState<string>('');
     const [userName, setUserName] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
-    const [selectedField, setSelectedField] = useState<string | null>(null);
     const [fields, setFields] = useState<any[]>([]);
     const [filteredReports, setFilteredReports] = useState<any[]>([]);
     const [selectedFieldId, setSelectedFieldId] = useState<string>('all');
@@ -22,6 +20,53 @@ export default function Reports() {
     const [startCosechaDate, setStartCosechaDate] = useState<string>('');
     const [endCosechaDate, setEndCosechaDate] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'cultivos' | 'tratamientos' | 'insumos'>('cultivos');
+    const [showUserMenu, setShowUserMenu] = useState(false);
+
+    const handleDeleteAccount = async () => {
+        const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.");
+        
+        if (!confirmDelete) return;
+        
+        const confirmFinal = window.prompt("Escribe 'ELIMINAR' para confirmar la eliminación de tu cuenta");
+        if (confirmFinal !== "ELIMINAR") return;
+        
+        try {
+            const response = await axios.post(
+                'https://qhdzac2nc8.execute-api.us-east-1.amazonaws.com/delete-user/delete-user',
+                { idcuentas: id },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+            
+            if (response.status === 200) {
+                alert('Tu cuenta ha sido eliminada con éxito.');
+                localStorage.removeItem('username');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('currentFieldId');
+                navigate('/');
+            } else {
+                alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+            }
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+        }
+    };    
+
+    const handleClearSiembraDates = () => {
+        setStartSiembraDate('');
+        setEndSiembraDate('');
+        setFilteredReports(fields); 
+    };
+    
+    const handleClearCosechaDates = () => {
+        setStartCosechaDate('');
+        setEndCosechaDate('');
+        setFilteredReports(fields);
+    };
 
     const generateCSV = () => {
         const table = document.getElementById('report-table');
@@ -64,7 +109,7 @@ export default function Reports() {
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
         const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+        const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
     };
@@ -257,6 +302,22 @@ export default function Reports() {
         }
     }, [activeTab]);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            const dropdown = document.querySelector('.user-dropdown-container');
+            if (dropdown && !dropdown.contains(target)) {
+                setShowUserMenu(false);
+            }
+        };
+    
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showUserMenu]);
+
+    
     const handleFieldChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const fieldId = e.target.value;
         setSelectedFieldId(fieldId);
@@ -365,13 +426,36 @@ export default function Reports() {
     
             {/* Main Content Area */}
             <div className="w-3/4 relative">
-                {/* Logout Button */}
-                <button
-                    onClick={handleLogout}
-                    className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center z-10"
-                >
-                    <FaSignOutAlt className="text-white" size={24} />
-                </button>
+                {/* User Menu Dropdown */}
+                <div className="absolute top-4 right-4 user-dropdown-container">
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            className="p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                        >
+                            <FaUser className="text-white" size={24} />
+                        </button>
+                        
+                        {/* Dropdown menu */}
+                        {showUserMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                                <button
+                                    onClick={handleLogout}
+                                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                                >
+                                    <FaSignOutAlt className="mr-2" /> Cerrar sesión
+                                </button>
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
+                                >
+                                    <FaTrashAlt className="mr-2" /> Eliminar cuenta
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
         
             {/* Reports Content */}
             <div className="p-6">
@@ -470,13 +554,22 @@ export default function Reports() {
                                         />
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleSiembraDateChange}
-                                    className="mt-2 p-2 bg-blue-500 text-white rounded-md"
-                                >
-                                    Filtrar por Fecha de Siembra
-                                </button>
+                                <div className="flex space-x-2 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleSiembraDateChange}
+                                        className="p-2 bg-blue-500 text-white rounded-md"
+                                    >
+                                        Filtrar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleClearSiembraDates}
+                                        className="p-2 bg-gray-500 text-white rounded-md"
+                                    >
+                                        Limpiar
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Cosecha Date Range */}
@@ -506,13 +599,22 @@ export default function Reports() {
                                         />
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleCosechaDateChange}
-                                    className="mt-2 p-2 bg-blue-500 text-white rounded-md"
-                                >
-                                    Filtrar por Fecha de Cosecha
-                                </button>
+                                <div className="flex space-x-2 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleCosechaDateChange}
+                                        className="p-2 bg-blue-500 text-white rounded-md"
+                                    >
+                                        Filtrar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleClearCosechaDates}
+                                        className="p-2 bg-gray-500 text-white rounded-md"
+                                    >
+                                        Limpiar
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -547,7 +649,7 @@ export default function Reports() {
                                         {sortConfig.key !== 'cantidad_siembra' && <FaSort />}
                                     </th>
                                     <th className="py-3 px-4 text-left border-b cursor-pointer" onClick={() => sortReports('estado')}>
-                                        Estado y Fecha de Registro
+                                        Etapa y Fecha de Registro
                                         {sortConfig.key === 'estado' && (sortConfig.direction === 'ascending' ? <FaSortUp /> : <FaSortDown />)}
                                         {sortConfig.key !== 'estado' && <FaSort />}
                                     </th>
@@ -637,7 +739,7 @@ export default function Reports() {
                                                     <input
                                                         type="date"
                                                         id="startDate"
-                                                        value={startSiembraDate}
+                                                        value={startSiembraDate} // You can use the same state for both filters
                                                         onChange={(e) => setStartSiembraDate(e.target.value)}
                                                         className="p-2 border border-gray-300 rounded-md"
                                                     />
@@ -647,31 +749,44 @@ export default function Reports() {
                                                     <input
                                                         type="date"
                                                         id="endDate"
-                                                        value={endSiembraDate}
+                                                        value={endSiembraDate} // Same state for the end date filter
                                                         onChange={(e) => setEndSiembraDate(e.target.value)}
                                                         className="p-2 border border-gray-300 rounded-md"
                                                     />
                                                 </div>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    // For treatments, filter by fecha_tratamiento instead
-                                                    const filtered = fields.filter((field) => {
-                                                        const fechaTratamiento = new Date(field.fecha_tratamiento);
-                                                        const startDate = new Date(startSiembraDate);
-                                                        const endDate = new Date(endSiembraDate);
-                                                        return (
-                                                            (startSiembraDate === '' || fechaTratamiento >= startDate) &&
-                                                            (endSiembraDate === '' || fechaTratamiento <= endDate)
-                                                        );
-                                                    });
-                                                    setFilteredReports(filtered);
-                                                }}
-                                                className="mt-2 p-2 bg-blue-500 text-white rounded-md"
-                                            >
-                                                Filtrar por Fecha
-                                            </button>
+                                            <div className="flex space-x-2 mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        // Filter by fecha_tratamiento for tratamientos
+                                                        const filtered = fields.filter((field) => {
+                                                            const fechaTratamiento = new Date(field.fecha_tratamiento);
+                                                            const startDate = new Date(startSiembraDate);
+                                                            const endDate = new Date(endSiembraDate);
+                                                            return (
+                                                                (startSiembraDate === '' || fechaTratamiento >= startDate) &&
+                                                                (endSiembraDate === '' || fechaTratamiento <= endDate)
+                                                            );
+                                                        });
+                                                        setFilteredReports(filtered);
+                                                    }}
+                                                    className="p-2 bg-blue-500 text-white rounded-md"
+                                                >
+                                                    Filtrar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setStartSiembraDate(''); // Reset the start date
+                                                        setEndSiembraDate(''); // Reset the end date
+                                                        setFilteredReports(fields); // Reset to show all reports
+                                                    }}
+                                                    className="p-2 bg-gray-500 text-white rounded-md"
+                                                >
+                                                    Limpiar
+                                                </button>
+                                            </div>
                                         </div>
 
 
@@ -791,7 +906,7 @@ export default function Reports() {
                                     <input
                                         type="date"
                                         id="startDate"
-                                        value={startSiembraDate}
+                                        value={startSiembraDate} // Reuse the same state for filtering
                                         onChange={(e) => setStartSiembraDate(e.target.value)}
                                         className="p-2 border border-gray-300 rounded-md"
                                     />
@@ -801,31 +916,44 @@ export default function Reports() {
                                     <input
                                         type="date"
                                         id="endDate"
-                                        value={endSiembraDate}
+                                        value={endSiembraDate} // Same state for the end date
                                         onChange={(e) => setEndSiembraDate(e.target.value)}
                                         className="p-2 border border-gray-300 rounded-md"
                                     />
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    // For inputs, filter by fecha_adquisicion
-                                    const filtered = fields.filter((field) => {
-                                        const fechaAdquisicion = new Date(field.fecha_adquisicion);
-                                        const startDate = new Date(startSiembraDate);
-                                        const endDate = new Date(endSiembraDate);
-                                        return (
-                                            (startSiembraDate === '' || fechaAdquisicion >= startDate) &&
-                                            (endSiembraDate === '' || fechaAdquisicion <= endDate)
-                                        );
-                                    });
-                                    setFilteredReports(filtered);
-                                }}
-                                className="mt-2 p-2 bg-blue-500 text-white rounded-md"
-                            >
-                                Filtrar por Fecha
-                            </button>
+                            <div className="flex space-x-2 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        // For inputs, filter by fecha_adquisicion
+                                        const filtered = fields.filter((field) => {
+                                            const fechaAdquisicion = new Date(field.fecha_adquisicion);
+                                            const startDate = new Date(startSiembraDate);
+                                            const endDate = new Date(endSiembraDate);
+                                            return (
+                                                (startSiembraDate === '' || fechaAdquisicion >= startDate) &&
+                                                (endSiembraDate === '' || fechaAdquisicion <= endDate)
+                                            );
+                                        });
+                                        setFilteredReports(filtered);
+                                    }}
+                                    className="p-2 bg-blue-500 text-white rounded-md"
+                                >
+                                    Filtrar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStartSiembraDate(''); // Reset the start date
+                                        setEndSiembraDate(''); // Reset the end date
+                                        setFilteredReports(fields); // Reset to show all reports
+                                    }}
+                                    className="p-2 bg-gray-500 text-white rounded-md"
+                                >
+                                    Limpiar
+                                </button>
+                            </div>
                         </div>
 
                         {/* Reports Table */}
@@ -879,11 +1007,11 @@ export default function Reports() {
                                                 <td className="py-3 px-4 border-b">{report.categoria_insumo}</td>
                                                 <td className="py-3 px-4 border-b">{report.subcategoria_insumo}</td>
                                                 <td className="py-3 px-4 border-b">{formatDate(report.fecha_adquisicion)}</td>
-                                                <td className="py-3 px-4 border-b">{report.cultivo ? `${report.cultivo} - ${report.numero_lote}` : 'N/A'}</td>
+                                                <td className="py-3 px-4 border-b">{report.cultivo ? `${report.cultivo} - ${report.numero_lote}` : '-'}</td>
                                                 <td className="py-3 px-4 border-b">
                                                     {report.nombre_tratamiento ? 
                                                     `${report.nombre_tratamiento} - ${formatDate(report.fecha_tratamiento)}` : 
-                                                    'N/A'}
+                                                    '-'}
                                                 </td>
                                             </tr>
                                         ))

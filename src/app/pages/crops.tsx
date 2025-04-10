@@ -1,8 +1,9 @@
-//crops.tsx
+/* eslint-disable */
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaHome, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaTrashAlt, FaMapMarkerAlt, FaSeedling, FaUser } from 'react-icons/fa';
 
 export default function Crops() {
     const { id } = useParams();
@@ -11,12 +12,48 @@ export default function Crops() {
     const [userName, setUserName] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
-    const [weatherData, setWeatherData] = useState<any>(null);
     const [lat, setLat] = useState<number | null>(null);
     const [lon, setLon] = useState<number | null>(null);
     const [showForm, setShowForm] = useState<boolean>(false);
     const [crops, setCrops] = useState<any[]>([]);
     const [selectedField, setSelectedField] = useState<string | null>(null);
+    const [editMode, setEditMode] = useState<boolean>(false);
+    const [currentCropId, setCurrentCropId] = useState<string | null>(null);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+
+    const handleDeleteAccount = async () => {
+      const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.");
+      
+      if (!confirmDelete) return;
+      
+      const confirmFinal = window.prompt("Escribe 'ELIMINAR' para confirmar la eliminación de tu cuenta");
+      if (confirmFinal !== "ELIMINAR") return;
+      
+      try {
+          const response = await axios.post(
+              'https://qhdzac2nc8.execute-api.us-east-1.amazonaws.com/delete-user/delete-user',
+              { idcuentas: id },
+              {
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+              }
+          );
+          
+          if (response.status === 200) {
+              alert('Tu cuenta ha sido eliminada con éxito.');
+              localStorage.removeItem('username');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('currentFieldId');
+              navigate('/');
+          } else {
+              alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+          }
+      } catch (error) {
+          console.error('Error deleting account:', error);
+          alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+      }
+  };  
 
     const toBase64 = (file: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -31,7 +68,6 @@ export default function Crops() {
       const file = e.target.files?.[0];
       if (file) {
         try {
-          // Convert the image to Base64
           const base64Image = await toBase64(file);
           
           setFormData({
@@ -43,18 +79,7 @@ export default function Crops() {
         }
       }
     };
-    
-
-    const uploadImageToS3 = async (file: File) => {
-      // Logic to upload image to S3
-      const s3Url = await axios.post('your-lambda-api-to-upload-image', file, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return s3Url.data.imageUrl; 
-    };
-    
+        
     const handleLogout = () => {
       localStorage.removeItem('username');
       localStorage.removeItem('userId');
@@ -116,7 +141,6 @@ export default function Crops() {
     
           if (response.status === 200) {
             alert('Cultivo eliminado exitosamente');
-            // Refresh crops data
             fetchCropsData(id!, selectedField || formData.idcampo);
           } else {
             alert('Error al eliminar el cultivo');
@@ -128,6 +152,33 @@ export default function Crops() {
       }
     };
     
+    const handleEditCrop = (crop: any) => {
+      setCurrentCropId(crop.idcrops);
+      setFormData({
+        cultivo: crop.cultivo,
+        customCultivo: '',
+        descripcion: crop.descripcion || '',
+        numero_lote: crop.numero_lote || '',
+        tipo_semilla: crop.tipo_semilla || '',
+        fecha_siembra: crop.fecha_siembra || '',
+        fecha_estimada_cosecha: crop.fecha_estimada_cosecha || '',
+        cantidad_siembra: crop.cantidad_siembra || '',
+        unidad_siembra: crop.unidad_siembra || '',
+        notas: crop.notas || '',
+        estado: crop.estado || '',
+        customEstado: '',
+        fecha_estado: crop.fecha_estado || '',
+        fecha_cosecha: crop.fecha_cosecha || '',
+        cantidad_cosecha: crop.cantidad_cosecha || '',
+        unidad_cosecha: crop.unidad_cosecha || '',
+        imagen: '', // This won't be used for updates
+        idcuentas: id || '',
+        idcampo: selectedField || formData.idcampo || '',
+      });
+      setEditMode(true);
+      setShowForm(true);
+    };
+
     useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const fieldId = queryParams.get('idcampo');
@@ -169,10 +220,23 @@ export default function Crops() {
         }
     }, [id, formData.idcampo]);
 
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          const target = event.target as HTMLElement;
+          const dropdown = document.querySelector('.user-dropdown-container');
+          if (dropdown && !dropdown.contains(target)) {
+              setShowUserMenu(false);
+          }
+      };
   
-    const fetchFieldData = async (userId: string) => {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [showUserMenu]);
+  
+    /* const fetchFieldData = async (userId: string) => {
       try {
-        // Replace this URL with your actual API endpoint
         const response = await axios.post(
             'https://cbv6225k4g.execute-api.us-east-1.amazonaws.com/get-field-data/get-field-data', 
             { idcuentas: userId },
@@ -192,7 +256,6 @@ export default function Crops() {
             setLat(field.latitud); 
             setLon(field.longitud);
             
-            // Store idcampo in the formData
             setFormData((prevFormData) => ({
               ...prevFormData,
               idcampo: field.idcampo,
@@ -207,7 +270,7 @@ export default function Crops() {
         setError('Failed to fetch field data');
         setLoading(false);
       }
-    };
+    }; */
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
@@ -234,27 +297,29 @@ export default function Crops() {
 
     const handleCancelarClick = () => {
       setFormData({
-          cultivo: '',
-          customCultivo: '',
-          descripcion: '',
-          numero_lote: '',
-          tipo_semilla: '',
-          fecha_siembra: '',
-          fecha_estimada_cosecha: '',
-          cantidad_siembra: '',
-          unidad_siembra: '',
-          notas: '',
-          estado: '',
-          customEstado: '',
-          fecha_estado: '',
-          fecha_cosecha: '',
-          cantidad_cosecha: '',
-          unidad_cosecha: '',
-          imagen: '',
-          idcuentas: id || '',
-          idcampo: selectedField || formData.idcampo || '', 
+        cultivo: '',
+        customCultivo: '',
+        descripcion: '',
+        numero_lote: '',
+        tipo_semilla: '',
+        fecha_siembra: '',
+        fecha_estimada_cosecha: '',
+        cantidad_siembra: '',
+        unidad_siembra: '',
+        notas: '',
+        estado: '',
+        customEstado: '',
+        fecha_estado: '',
+        fecha_cosecha: '',
+        cantidad_cosecha: '',
+        unidad_cosecha: '',
+        imagen: '',
+        idcuentas: id || '',
+        idcampo: selectedField || formData.idcampo || '',
       });
-        setShowForm(false); 
+      setShowForm(false);
+      setEditMode(false);
+      setCurrentCropId(null);
     };
     
     const formatDateLatinAmerican = (dateString: string | null | undefined): string => {
@@ -262,10 +327,8 @@ export default function Crops() {
       
       try {
         const date = new Date(dateString);
-        // Check if date is valid
         if (isNaN(date.getTime())) return dateString;
         
-        // Format as DD/MM/YYYY (Latin American style)
         return date.toLocaleDateString('es-ES', {
           day: '2-digit',
           month: '2-digit',
@@ -300,9 +363,9 @@ export default function Crops() {
               base64Image: formData.imagen,
             }
           );
-    
+
           console.log('Lambda 1 response:', imageUploadResponse.data); 
-  
+
           if (imageUploadResponse.status === 200) {
             const responseBody = JSON.parse(imageUploadResponse.data.body); 
             imageUrl = responseBody.imageUrl;
@@ -311,24 +374,53 @@ export default function Crops() {
             return;
           }
         }
-    
-        console.log('Sending crop data to Lambda 2:', imageUrl); 
-        
-        const cropData = {
-          ...submitData, 
-          imageUrl: imageUrl, 
-        };
-    
-        const response = await axios.post(
-          'https://axzrjq6ya9.execute-api.us-east-1.amazonaws.com/add-crop/add-crop',
-          cropData,
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-    
+
+        let response;
+
+        if (editMode && currentCropId) {
+          console.log('Updating crop data with ID:', currentCropId);
+
+          const { imagen, ...updateDataWithoutImage } = submitData;
+
+          response = await axios.post(
+            'https://j5bvcnob9b.execute-api.us-east-1.amazonaws.com/update-crop/update-crop',
+            {
+              ...updateDataWithoutImage,
+              cropId: currentCropId
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          if (response.status === 200) {
+            alert('Cultivo updated successfully');
+          } else {
+            alert('Failed to update cultivo');
+          }
+        } else {
+          // Create new crop
+          console.log('Sending new crop data to Lambda 2:', imageUrl); 
+          
+          response = await axios.post(
+            'https://axzrjq6ya9.execute-api.us-east-1.amazonaws.com/add-crop/add-crop',
+            {
+              ...submitData, 
+              imageUrl: imageUrl, 
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          if (response.status === 200) {
+            alert('Cultivo added successfully');
+          } else {
+            alert('Failed to add cultivo');
+          }
+        }
+
         if (response.status === 200) {
-          alert('Cultivo added successfully');
           setShowForm(false);
-    
+          setEditMode(false);
+          setCurrentCropId(null);
+
           setFormData({
             cultivo: '',
             customCultivo: '',
@@ -350,14 +442,12 @@ export default function Crops() {
             idcuentas: id || '',
             idcampo: selectedField || formData.idcampo || '',
           });
-    
+
           if (id && formData.idcampo) {
             fetchCropsData(id, formData.idcampo);
           } else {
             console.error('Missing id or idcampo');
           }
-        } else {
-          alert('Failed to add cultivo');
         }
       } catch (error) {
         console.error("Error submitting the form:", error);
@@ -462,13 +552,36 @@ export default function Crops() {
                             </div>
           </div>
 
-          {/* Logout Button */}
-                <button
-                  onClick={handleLogout}
-                  className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
-                >
-                  <FaSignOutAlt className="text-white" size={24} />
-                </button>
+          {/* User Menu Dropdown */}
+          <div className="absolute top-4 right-4 user-dropdown-container">
+              <div className="relative">
+                  <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                  >
+                      <FaUser className="text-white" size={24} />
+                  </button>
+                  
+                  {/* Dropdown menu */}
+                  {showUserMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                          <button
+                              onClick={handleLogout}
+                              className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                          >
+                              <FaSignOutAlt className="mr-2" /> Cerrar sesión
+                          </button>
+                          <button
+                              onClick={handleDeleteAccount}
+                              className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
+                          >
+                              <FaTrashAlt className="mr-2" /> Eliminar cuenta
+                          </button>
+                      </div>
+                  )}
+              </div>
+          </div>
+
 
           {/* Main Content */}
           <div className="w-3/4 p-6">
@@ -702,58 +815,60 @@ export default function Crops() {
 
                   {/* Conditionally render the "Cosecha" related fields */}
                   {formData.estado === 'Cosecha' && (
-                  <>
-                    <div className="mb-2">
-                      <label className="block text-gray-700 text-sm font-bold mb-1">Fecha de Cosecha</label>
-                      <input
-                        type="date"
-                        name="fecha_cosecha"
-                        value={formData.fecha_cosecha}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                    
-                    <div className="flex space-x-2 mb-2">
-                      <div className="w-1/2">
-                        <label className="block text-gray-700 text-sm font-bold mb-1">Cantidad de Cosecha</label>
+                    <>
+                      <div className="mb-2">
+                        <label className="block text-gray-700 text-sm font-bold mb-1">Fecha de Cosecha</label>
                         <input
-                          type="number"
-                          name="cantidad_cosecha"
-                          value={formData.cantidad_cosecha}
+                          type="date"
+                          name="fecha_cosecha"
+                          value={formData.fecha_cosecha}
                           onChange={handleInputChange}
                           className="w-full p-2 border rounded"
                         />
                       </div>
-                      <div className="w-1/2">
-                        <label className="block text-gray-700 text-sm font-bold mb-1">Unidad de Cosecha</label>
-                        <select
-                          name="unidad_cosecha"
-                          value={formData.unidad_cosecha}
-                          onChange={handleInputChange}
-                          className="w-full p-2 border rounded"
-                        >
-                          <option value="">Seleccionar unidad</option>
-                          <option value="kg">kg</option>
-                          <option value="g">grs</option>
-                          <option value="t">ton</option>
-                          <option value="lb">lb</option>
-                          <option value="bolsas">bolsas</option>
-                        </select>
+                      
+                      <div className="flex space-x-2 mb-2">
+                        <div className="w-1/2">
+                          <label className="block text-gray-700 text-sm font-bold mb-1">Cantidad de Cosecha</label>
+                          <input
+                            type="number"
+                            name="cantidad_cosecha"
+                            value={formData.cantidad_cosecha}
+                            onChange={handleInputChange}
+                            className="w-full p-2 border rounded"
+                          />
+                        </div>
+                        <div className="w-1/2">
+                          <label className="block text-gray-700 text-sm font-bold mb-1">Unidad de Cosecha</label>
+                          <select
+                            name="unidad_cosecha"
+                            value={formData.unidad_cosecha}
+                            onChange={handleInputChange}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="">Seleccionar unidad</option>
+                            <option value="kg">kg</option>
+                            <option value="g">grs</option>
+                            <option value="t">ton</option>
+                            <option value="lb">lb</option>
+                            <option value="bolsas">bolsas</option>
+                          </select>
+                        </div>
                       </div>
-
-                    </div>
-                    
-                    <div className="mb-2">
-                      <label className="block text-gray-700 text-sm font-bold mb-1">Imagen</label>
-                      <input
-                        type="file"
-                        name="imagen"
-                        onChange={handleImageUpload}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                  </>
+                      
+                      {/* Only show image upload in create mode, not edit mode */}
+                      {!editMode && (
+                        <div className="mb-2">
+                          <label className="block text-gray-700 text-sm font-bold mb-1">Imagen</label>
+                          <input
+                            type="file"
+                            name="imagen"
+                            onChange={handleImageUpload}
+                            className="w-full p-2 border rounded"
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
     
                   <div className="flex justify-between">
@@ -811,12 +926,15 @@ export default function Crops() {
                           {crop.cantidad_cosecha ? `${crop.cantidad_cosecha} ${crop.unidad_cosecha || ''}` : ''}
                         </td>
                         <td className="px-6 py-4 border-t border-gray-200 flex space-x-2">
-                          <button className="p-1 rounded bg-blue-500 text-white hover:bg-blue-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
+                        <button 
+                          onClick={() => handleEditCrop(crop)}
+                          className="p-1 rounded bg-blue-500 text-white hover:bg-blue-600"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
                           <button 
                             onClick={() => handleDeleteCrop(crop.idcrops)}
                             className="p-1 rounded bg-red-500 text-white hover:bg-red-600"

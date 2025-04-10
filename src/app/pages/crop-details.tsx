@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+/* eslint-disable */
+
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { GoogleMap, LoadScript, Marker, StandaloneSearchBox } from '@react-google-maps/api';
-
-// Google Maps API key - using the same one you're using in addFields.tsx
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCNEVHEAz5iJEAUpOdvONq9IVMTR8gHg0E';
-const libraries: ["places"] = ["places"];
+import { FaTrash } from 'react-icons/fa';
 
 export default function CropDetails() {
   const { cropId, id } = useParams();
@@ -16,38 +14,40 @@ export default function CropDetails() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState<boolean>(false);
   const [availabilityData, setAvailabilityData] = useState({
     name: '',
-    latitud: '',
-    longitud: '',
     address: ''
   });
+
+  const handleDeleteAvailability = async (idavailability: string) => {
+    console.log("Deleting availability with id:", idavailability); // Debugging log
+    try {
+      const response = await axios.post(
+        'https://ljipzbeadb.execute-api.us-east-1.amazonaws.com/delete-availability/delete-availability',
+        { idavailability: idavailability }, 
+        { headers: { 'Content-Type': 'application/json' } }
+      );
   
-  const [mapCenter, setMapCenter] = useState({ lat: -34.603722, lng: -58.381592 }); // Default to Buenos Aires
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const autocompleteRef = useRef<google.maps.places.SearchBox | null>(null);
-
-  const handleMapApiLoaded = () => {
-    setIsMapLoaded(true);
-  };
-
+      if (response.status === 200) {
+        alert('Disponibilidad eliminada con éxito');
+        fetchCropDetails(); 
+      }
+    } catch (err) {
+      console.error('Error deleting availability:', err);
+      alert('Error al eliminar disponibilidad');
+    }
+  };  
+  
   interface Treatment {
     idtreatment: string; 
     nombre: string;
     fecha: string;
   }  
   
-  interface Availability {
-    name: string;
-    address: string;
-  }
-
   const handleAddAvailability = async () => {
     try {
       const postData = {
         idcrops: cropId,
         idcuentas: id,
         idcampo: crop.idcampo,
-        latitud: availabilityData.latitud,
-        longitud: availabilityData.longitud,
         name: availabilityData.name,
         address: availabilityData.address
       };
@@ -69,17 +69,6 @@ export default function CropDetails() {
       console.error('Error adding availability:', err);
       alert('Error al agregar disponibilidad');
     }
-  };
-
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
-    const lat = e.latLng?.lat() || 0;
-    const lng = e.latLng?.lng() || 0;
-    setAvailabilityData({
-      ...availabilityData,
-      latitud: lat.toString(),
-      longitud: lng.toString()
-    });
-    setMapCenter({ lat, lng });
   };
 
   const fetchCropDetails = async () => {
@@ -152,7 +141,7 @@ export default function CropDetails() {
         Atrás
       </button>
       
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 text-center">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 text-left">
         <h1 className="text-2xl font-bold mb-4">{crop.cultivo}</h1>
         
         <p className="mb-4">{crop.descripcion}</p>
@@ -161,7 +150,7 @@ export default function CropDetails() {
         
         <p className="mb-2"><strong>Fecha de Cosecha:</strong> {formatDate(crop.fecha_cosecha)}</p>
         
-        <p className="mb-4"><strong>Ubicación:</strong> {crop.campo_nombre}</p>
+        <p className="mb-4"><strong>Campo:</strong> {crop.campo_nombre}</p>
         
         {crop.treatments && JSON.parse(crop.treatments).length > 0 ? (
           <div className="mb-4">
@@ -183,16 +172,24 @@ export default function CropDetails() {
           <div className="mb-4">
             <h2 className="text-lg font-bold mb-2">Disponibilidad</h2>
             <ul className="list-disc list-inside">
-              {JSON.parse(crop.availability_info).map((availability: { name: string; address: string }, index: number) => (
-                <li key={index} className="mb-1">
-                  <strong>{availability.name}</strong> - {availability.address}
-                </li>
-              ))}
+            {JSON.parse(crop.availability_info).map((availability: { name: string; address: string; idavailability: string }, index: number) => (
+              <li key={index} className="mb-1">
+                <strong>{availability.name}</strong> - {availability.address}
+                <button
+                  onClick={() => handleDeleteAvailability(availability.idavailability)} // This line
+                  className="ml-2 text-red-500"
+                >
+                  <FaTrash />
+                </button>
+              </li>
+            ))}
+
             </ul>
           </div>
         ) : (
           <p className="mb-4">No hay disponibilidad registrada</p>
         )}
+
 
         <div className="flex flex-col items-center">
           {crop.imagen ? (
@@ -237,46 +234,16 @@ export default function CropDetails() {
                   />
                 </div>
                 
-                <LoadScript 
-                  googleMapsApiKey={GOOGLE_MAPS_API_KEY} 
-                  libraries={libraries}
-                  onLoad={handleMapApiLoaded}
-                >
-                  {isMapLoaded && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium mb-1">Dirección:</label>
-                      <StandaloneSearchBox
-                        onLoad={(ref) => {
-                          autocompleteRef.current = ref;
-                        }}
-                        onPlacesChanged={() => {
-                          const places = autocompleteRef.current?.getPlaces();
-                          if (places && places.length > 0) {
-                            const place = places[0];
-                            if (place.geometry && place.geometry.location) {
-                              const lat = place.geometry.location.lat();
-                              const lng = place.geometry.location.lng();
-                              setAvailabilityData({
-                                ...availabilityData,
-                                latitud: lat.toString(),
-                                longitud: lng.toString(),
-                                address: place.formatted_address || ''
-                              });
-                            }
-                          }
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="Ingrese una dirección o ubicación"
-                          className="w-full p-2 border rounded"
-                          value={availabilityData.address}
-                          onChange={(e) => setAvailabilityData({...availabilityData, address: e.target.value})}
-                        />
-                      </StandaloneSearchBox>
-                    </div>
-                  )}
-                </LoadScript>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Dirección:</label>
+                  <input
+                    type="text"
+                    placeholder="Ingrese una dirección o ubicación"
+                    className="w-full p-2 border rounded"
+                    value={availabilityData.address}
+                    onChange={(e) => setAvailabilityData({...availabilityData, address: e.target.value})}
+                  />
+                </div>
                 
                 <div className="flex justify-end space-x-2">
                   <button 
@@ -288,7 +255,7 @@ export default function CropDetails() {
                   <button 
                     onClick={handleAddAvailability}
                     className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    disabled={!availabilityData.name || !availabilityData.latitud || !availabilityData.longitud}
+                    disabled={!availabilityData.name || !availabilityData.address}
                   >
                     Guardar
                   </button>

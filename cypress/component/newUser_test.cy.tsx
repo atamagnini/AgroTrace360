@@ -1,5 +1,5 @@
 import { mount } from '@cypress/react';
-import Landing from '../../src/app/pages/welcome'; // Path to your Landing component
+import Landing from '../../src/app/pages/welcome';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';

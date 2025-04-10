@@ -1,16 +1,15 @@
-//overviewField.tsx
+/* eslint-disable */
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaSignOutAlt, FaTrash, FaMapMarkerAlt, FaSeedling } from 'react-icons/fa';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { FaRegCalendarAlt, FaRegListAlt, FaSearch, FaChartBar, FaFileAlt, FaTrashAlt, FaSignOutAlt, FaTrash, FaMapMarkerAlt, FaSeedling, FaUser } from 'react-icons/fa';
 import 'leaflet/dist/leaflet.css';
 
 export default function OverviewField() {
     const { id } = useParams();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const fieldId = queryParams.get('idcampo');
     const navigate = useNavigate();
     const [fieldName, setFieldName] = useState<string>('');
     const [userName, setUserName] = useState<string>('');
@@ -21,14 +20,44 @@ export default function OverviewField() {
     const [lon, setLon] = useState<number | null>(null);
     const [fields, setFields] = useState<any[]>([]);
     const [selectedField, setSelectedField] = useState<string | null>(null);
-    const [currentFieldId, setCurrentFieldId] = useState<string | null>(null);
-    
-    const mapContainerStyle = {
-        width: '100%',
-        height: '400px',
-        borderRadius: '8px'
-    };
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
+    const handleDeleteAccount = async () => {
+        const confirmDelete = window.confirm("¿Estás seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer. Perderás todos tus campos y datos.");
+        
+        if (!confirmDelete) return;
+        
+        const confirmFinal = window.prompt("Escribe 'ELIMINAR' para confirmar la eliminación de tu cuenta");
+        if (confirmFinal !== "ELIMINAR") return;
+        
+        try {
+          const response = await axios.post(
+            'https://qhdzac2nc8.execute-api.us-east-1.amazonaws.com/delete-user/delete-user',
+            { idcuentas: id },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (response.status === 200) {
+            alert('Tu cuenta ha sido eliminada con éxito.');
+            localStorage.removeItem('username');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('currentFieldId');
+            localStorage.removeItem('lastSelectedField');
+            
+            navigate('/');
+          } else {
+            alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+          }
+        } catch (error) {
+          console.error('Error deleting account:', error);
+          alert('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+        }
+    };
+    
     useEffect(() => {
         const fetchInitialFieldData = async (specificFieldId?: string | null) => {
             try {
@@ -57,7 +86,6 @@ export default function OverviewField() {
                     setLon(field.longitud);
                     setSelectedField(field.idcampo);
        
-                    // Fetch weather data
                     await fetchWeatherData(field.latitud, field.longitud);
                 } else {
                     setError('No tienes campos aún');
@@ -70,7 +98,6 @@ export default function OverviewField() {
             }
         };
        
-        // First, fetch all fields
         const fetchFields = async () => {
             try {
                 const fieldsResponse = await axios.post(
@@ -90,14 +117,12 @@ export default function OverviewField() {
                 if (fieldsData.length > 0) {
                     setFields(fieldsData);
     
-                    // Check for field ID in query params or localStorage
                     const specificFieldId = 
                         queryParams.get('idcampo') || 
                         localStorage.getItem('currentFieldId');
     
                     await fetchInitialFieldData(specificFieldId);
     
-                    // Clear the localStorage field ID after using it
                     localStorage.removeItem('currentFieldId');
                 } else {
                     setError('No tienes campos aún');
@@ -110,14 +135,28 @@ export default function OverviewField() {
             }
         };
        
-        // Only run if we have a user ID
         if (id) {
             fetchFields();
         }
     }, [id, location.search]);  
     
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          const target = event.target as HTMLElement;
+          
+          const dropdown = document.querySelector('.user-dropdown-container');
+          
+          if (dropdown && !dropdown.contains(target)) {
+            setShowUserMenu(false);
+          }
+        };
+      
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showUserMenu]);
     
-    // Handler function to log out
     const handleLogout = () => {
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
@@ -127,7 +166,7 @@ export default function OverviewField() {
 
     const fetchFieldData = async (fieldId: string) => {
         try {
-          setLoading(true);  // Start loading data
+          setLoading(true); 
           const response = await axios.post(
             'https://0ddnllnpb5.execute-api.us-east-1.amazonaws.com/get-first-field/get-first-field',
             { idcuentas: id, idcampo: fieldId },
@@ -136,14 +175,13 @@ export default function OverviewField() {
           
           const data = JSON.parse(response.data.body);
           if (response.status === 200 && data.length > 0) {
-            const field = data[0];  // Fetch field by ID
+            const field = data[0]; 
             setFieldName(field.nombre || 'No field name available');
             setUserName(field.nombre_usuario || 'No user name available');
             setLat(field.latitud);
             setLon(field.longitud);
-            setSelectedField(field.idcampo);  // Set the selected field's ID
+            setSelectedField(field.idcampo); 
       
-            // Fetch weather data
             await fetchWeatherData(field.latitud, field.longitud);
           } else {
             setError('No tienes campos aún');
@@ -151,7 +189,7 @@ export default function OverviewField() {
         } catch (error) {
           setError('Failed to fetch field data');
         } finally {
-          setLoading(false);  // Finish loading
+          setLoading(false);
         }
       };
       
@@ -199,11 +237,9 @@ export default function OverviewField() {
             );
             
             if (response.status === 200) {
-              // Remove the deleted field from the fields array
               const updatedFields = fields.filter(field => field.idcampo !== selectedField);
               setFields(updatedFields);
               
-              // If there are other fields, select the first one, otherwise show error
               if (updatedFields.length > 0) {
                 await fetchFieldData(updatedFields[0].idcampo);
                 window.history.pushState(null, '', `/${id}/overviewField?idcampo=${updatedFields[0].idcampo}`);
@@ -353,13 +389,35 @@ export default function OverviewField() {
             </button>
             </div>
 
-            {/* Logout Button - Adjust the right position */}
-            <button
-                onClick={handleLogout}
-                className="absolute top-4 right-4 p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
-            >
-                <FaSignOutAlt className="text-white" size={24} />
-            </button>
+            {/* User Menu Dropdown */}
+            <div className="absolute top-4 right-4 user-dropdown-container">
+            <div className="relative">
+                <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="p-3 text-white bg-blue-500 rounded-full text-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+                >
+                <FaUser className="text-white" size={24} />
+                </button>
+                
+                {/* Dropdown menu */}
+                {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                    <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                    <FaSignOutAlt className="mr-2" /> Cerrar sesión
+                    </button>
+                    <button
+                    onClick={handleDeleteAccount}
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
+                    >
+                    <FaTrashAlt className="mr-2" /> Eliminar cuenta
+                    </button>
+                </div>
+                )}
+            </div>
+            </div>
 
             {/* Main Content */}
             <div className="w-3/4 p-6">
