@@ -54,7 +54,7 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/agrotrace360.git
+git clone https://github.com/atamagnini/agrotrace360.git
 cd agrotrace360
 
 # Install dependencies
