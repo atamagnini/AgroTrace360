@@ -1,6 +1,6 @@
 # 🌾 AgroTrace 360
 
-**AgroTrace 360** is a web-based platform designed to help small and medium-sized agricultural producers in Argentina manage their crops, treatments, and traceability data. It allows producers to register fields, track crop lifecycles, generate QR codes for consumer transparency, and view dashboards and reports.
+**AgroTrace 360** is a web-based platform designed in spanish to help small and medium-sized agricultural producers in Argentina manage their crops, treatments, and traceability data. It allows producers to register fields, track crop lifecycles, generate QR codes for consumer transparency, and view dashboards and reports.
 
 🔗 **Live Demo**: [http://agrotrace360.s3-website-us-east-1.amazonaws.com](http://agrotrace360.s3-website-us-east-1.amazonaws.com)
 
